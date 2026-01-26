@@ -1,6 +1,5 @@
-import type { Route } from "./+types/home"
 import Nav from "../components/Nav"
-import { Link } from "react-router"
+import { Link } from "react-router-dom"
 
 // Types
 interface Maker {
@@ -107,13 +106,6 @@ const mockActivity: Activity[] = [
   }
 ]
 
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Coinswap Maker Dashboard" },
-    { name: "description", content: "Manage your Coinswap makers" },
-  ]
-}
-
 export default function Home() {
   // Calculate totals
   const totalBalance = mockMakers.reduce((sum, m) => sum + parseFloat(m.balance), 0).toFixed(2)
@@ -158,7 +150,7 @@ export default function Home() {
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-5 gap-3">
             <h2 className="text-lg sm:text-xl font-semibold">Your Makers</h2>
-            <Link to="/addMaker" className="px-4 sm:px-5 py-2 sm:py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all font-semibold text-sm w-full sm:w-auto">
+            <Link to="/addMaker" className="px-4 sm:px-5 py-2 sm:py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all font-semibold text-sm w-full sm:w-auto text-center">
               + Add New Maker
             </Link>
           </div>

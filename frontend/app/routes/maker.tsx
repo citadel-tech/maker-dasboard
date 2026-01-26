@@ -1,6 +1,5 @@
-import type { Route } from "./+types/maker"
 import Nav from "../components/Nav"
-import { Link } from "react-router"
+import { Link } from "react-router-dom"
 
 // Types
 interface Maker {
@@ -60,13 +59,6 @@ const mockMakers: Maker[] = [
   }
 ]
 
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Makers - Coinswap" },
-    { name: "description", content: "Manage all your makers" },
-  ]
-}
-
 export default function Maker() {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
@@ -79,7 +71,7 @@ export default function Maker() {
             <h1 className="text-2xl sm:text-3xl font-bold mb-2">Makers</h1>
             <p className="text-sm sm:text-base text-gray-400">Manage and monitor all your maker instances</p>
           </div>
-          <Link to="/addMaker" className="px-4 sm:px-5 py-2 sm:py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all font-semibold text-sm w-full sm:w-auto">
+          <Link to="/addMaker" className="px-4 sm:px-5 py-2 sm:py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all font-semibold text-sm w-full sm:w-auto text-center">
             + Add New Maker
           </Link>
         </div>

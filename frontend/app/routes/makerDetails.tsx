@@ -1,6 +1,6 @@
-import type { Route } from "./+types/makerDetails"
 import Nav from "../components/Nav"
 import { useState } from "react"
+import { useParams } from "react-router-dom"
 
 // This would come from route params in real implementation
 // For now using mock data
@@ -31,19 +31,12 @@ const mockSwapHistory = [
   { id: 3, amount: '0.8', fee: '0.004', status: 'completed', time: '1 day ago' },
 ]
 
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Maker 1 - Coinswap" },
-    { name: "description", content: "Manage Maker 1" },
-  ]
-}
-
-export default function MakerDetail({ params }: Route.ComponentProps) {
-  const { makerId } = params
+export default function MakerDetails() {
+  const { makerId } = useParams<{ makerId: string }>()
   const [activeTab, setActiveTab] = useState<'dashboard' | 'wallet' | 'swaps' | 'logs'>('dashboard')
   
   // TODO: Fetch maker data based on makerId
-  // const maker = getMakerById(makerId)
+  console.log('Viewing maker:', makerId)
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
