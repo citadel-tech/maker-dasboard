@@ -20,5 +20,5 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/settings" element={<Settings />} />
       </Routes>
     </BrowserRouter>
-  </StrictMode>
+  </StrictMode>,
 );

@@ -1,9 +1,9 @@
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom";
 
 export default function Nav() {
-  const location = useLocation()
-  
-  const isActive = (path: string) => location.pathname === path
+  const location = useLocation();
+
+  const isActive = (path: string) => location.pathname === path;
 
   return (
     <nav className="bg-gray-900 border-b border-gray-800">
@@ -14,26 +14,32 @@ export default function Nav() {
               Coinswap
             </Link>
             <div className="hidden sm:flex gap-1">
-              <Link 
-                to="/" 
+              <Link
+                to="/"
                 className={`px-4 py-2 rounded-lg transition-all ${
-                  isActive('/') ? 'bg-gray-800 text-orange-500' : 'text-gray-400 hover:text-gray-100'
+                  isActive("/")
+                    ? "bg-gray-800 text-orange-500"
+                    : "text-gray-400 hover:text-gray-100"
                 }`}
               >
                 Dashboard
               </Link>
-              <Link 
-                to="/maker" 
+              <Link
+                to="/maker"
                 className={`px-4 py-2 rounded-lg transition-all ${
-                  isActive('/maker') ? 'bg-gray-800 text-orange-500' : 'text-gray-400 hover:text-gray-100'
+                  isActive("/maker")
+                    ? "bg-gray-800 text-orange-500"
+                    : "text-gray-400 hover:text-gray-100"
                 }`}
               >
                 Makers
               </Link>
-              <Link 
-                to="/settings" 
+              <Link
+                to="/settings"
                 className={`px-4 py-2 rounded-lg transition-all ${
-                  isActive('/settings') ? 'bg-gray-800 text-orange-500' : 'text-gray-400 hover:text-gray-100'
+                  isActive("/settings")
+                    ? "bg-gray-800 text-orange-500"
+                    : "text-gray-400 hover:text-gray-100"
                 }`}
               >
                 Settings
@@ -43,5 +49,5 @@ export default function Nav() {
         </div>
       </div>
     </nav>
-  )
+  );
 }
