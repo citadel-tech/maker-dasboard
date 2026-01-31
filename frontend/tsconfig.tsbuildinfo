@@ -1,0 +1,1 @@
+{"root":["./vite-env.d.ts","./vite.config.ts","./app/main.tsx","./app/components/Nav.tsx","./app/routes/addMaker.tsx","./app/routes/home.tsx","./app/routes/maker.tsx","./app/routes/makerDetails.tsx","./app/routes/settings.tsx"],"version":"5.9.3"}

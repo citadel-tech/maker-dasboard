@@ -1,13 +1,5 @@
-import type { Route } from "./+types/addMaker"
 import Nav from "../components/Nav"
 import { useState } from "react"
-
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Add New Maker - Coinswap" },
-    { name: "description", content: "Configure and add a new maker" },
-  ]
-}
 
 export default function AddMaker() {
   const [formData, setFormData] = useState({
