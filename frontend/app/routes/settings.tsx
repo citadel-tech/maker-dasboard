@@ -65,7 +65,7 @@ export default function Settings() {
         blockHeight: "276",
         syncProgress: "100.0%",
       });
-    } catch (error) {
+    } catch {
       setBitcoinStatus({
         connected: false,
         version: "--",
@@ -85,7 +85,7 @@ export default function Settings() {
       // TODO: Implement actual Tor test
       await new Promise((resolve) => setTimeout(resolve, 1500));
       alert("✅ Tor connection successful!");
-    } catch (error) {
+    } catch {
       alert("❌ Tor connection failed");
     }
 
