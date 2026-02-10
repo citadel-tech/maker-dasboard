@@ -192,7 +192,7 @@ export default function Settings() {
 
             <div className="mt-4 bg-purple-900/20 border border-purple-800/30 rounded-lg p-3">
               <p className="text-xs text-purple-400">
-                🧅 <strong>Tor Network:</strong> Coinswap uses Tor for private
+                <strong>Tor Network:</strong> Coinswap uses Tor for private
                 maker discovery and communication. Make sure Tor is running.
               </p>
             </div>
