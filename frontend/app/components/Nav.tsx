@@ -25,16 +25,6 @@ export default function Nav() {
                 Dashboard
               </Link>
               <Link
-                to="/maker"
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  isActive("/maker")
-                    ? "bg-gray-800 text-orange-500"
-                    : "text-gray-400 hover:text-gray-100"
-                }`}
-              >
-                Makers
-              </Link>
-              <Link
                 to="/settings"
                 className={`px-4 py-2 rounded-lg transition-all ${
                   isActive("/settings")
