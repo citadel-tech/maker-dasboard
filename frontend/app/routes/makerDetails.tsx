@@ -408,7 +408,7 @@ export default function MakerDetails() {
             </div>
           </div>
         )}
-        
+
         {activeTab === "settings" && <MakerSettings />}
       </main>
     </div>

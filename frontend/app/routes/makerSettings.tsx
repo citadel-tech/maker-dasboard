@@ -4,6 +4,8 @@ export default function MakerSettings() {
   const [showPassword, setShowPassword] = useState(false);
   const [showRpcPassword, setShowRpcPassword] = useState(false);
   const [testingBitcoin, setTestingBitcoin] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [zmqEndpoint, setZmqEndpoint] = useState("tcp://127.0.0.1:28332");
   const [bitcoinStatus, setBitcoinStatus] = useState({
     connected: false,
     version: "--",
@@ -36,12 +38,10 @@ export default function MakerSettings() {
   };
 
   const copyZmqConfig = () => {
-    const zmqValue = (
-      document.getElementById("zmq-endpoint") as HTMLInputElement
-    )?.value;
-    const text = `zmqpubrawblock=${zmqValue}\nzmqpubrawtx=${zmqValue}`;
+    const text = `zmqpubrawblock=${zmqEndpoint}\nzmqpubrawtx=${zmqEndpoint}`;
     navigator.clipboard.writeText(text);
-    alert("✓ Copied to clipboard!");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -100,7 +100,7 @@ export default function MakerSettings() {
             </label>
             <input
               type="number"
-              defaultValue="9053"
+              defaultValue="9051"
               className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100"
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -357,8 +357,8 @@ export default function MakerSettings() {
               </label>
               <input
                 type="text"
-                id="zmq-endpoint"
-                defaultValue="tcp://127.0.0.1:28332"
+                value={zmqEndpoint}
+                onChange={(e) => setZmqEndpoint(e.target.value)}
                 className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono text-sm"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -391,16 +391,16 @@ export default function MakerSettings() {
             </div>
 
             <div className="bg-gray-800 rounded-lg p-4 font-mono text-xs text-gray-300">
-              zmqpubrawblock=tcp://127.0.0.1:28332
+              zmqpubrawblock={zmqEndpoint}
               <br />
-              zmqpubrawtx=tcp://127.0.0.1:28332
+              zmqpubrawtx={zmqEndpoint}
             </div>
 
             <button
               onClick={copyZmqConfig}
               className="w-full bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg text-sm transition-all"
             >
-              📋 Copy ZMQ Config
+              {copied ? "✓ Copied!" : "Copy ZMQ Config"}
             </button>
 
             <div className="bg-blue-900/20 border border-blue-800/30 rounded-lg p-4">
