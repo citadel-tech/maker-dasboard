@@ -38,10 +38,15 @@ export default function MakerSettings() {
   };
 
   const copyZmqConfig = () => {
-    const text = `zmqpubrawblock=${zmqEndpoint}\nzmqpubrawtx=${zmqEndpoint}`;
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      const text = `zmqpubrawblock=${zmqEndpoint}\nzmqpubrawtx=${zmqEndpoint}`;
+      navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error("Failed to copy to clipboard:", error);
+      setCopied(false);
+    }
   };
 
   return (
@@ -129,6 +134,7 @@ export default function MakerSettings() {
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
+                    aria-hidden="true"
                   >
                     <path
                       strokeLinecap="round"
@@ -332,6 +338,7 @@ export default function MakerSettings() {
 
             <div className="space-y-3">
               <button
+                type="button"
                 onClick={testBitcoinConnection}
                 disabled={testingBitcoin}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50"
@@ -369,7 +376,7 @@ export default function MakerSettings() {
 
             <div className="bg-yellow-900/20 border border-yellow-800/30 rounded-lg p-3">
               <p className="text-xs text-yellow-400">
-                ⚠️ <strong>Note:</strong> Both zmqpubrawblock and zmqpubrawtx
+                <strong>Note:</strong> Both zmqpubrawblock and zmqpubrawtx
                 should use the same endpoint (28332).
               </p>
             </div>
@@ -382,7 +389,7 @@ export default function MakerSettings() {
 
             <div className="bg-yellow-900/20 border border-yellow-800/30 rounded-lg p-4">
               <p className="text-xs text-yellow-400 mb-2">
-                ⚠️ <strong>ZMQ Required:</strong> Bitcoin Core must have ZMQ
+                <strong>ZMQ Required:</strong> Bitcoin Core must have ZMQ
                 enabled for real-time notifications.
               </p>
               <p className="text-xs text-gray-400">
@@ -397,16 +404,17 @@ export default function MakerSettings() {
             </div>
 
             <button
+              type="button"
               onClick={copyZmqConfig}
               className="w-full bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg text-sm transition-all"
             >
-              {copied ? "✓ Copied!" : "Copy ZMQ Config"}
+              {copied ? "Copied!" : "Copy ZMQ Config"}
             </button>
 
             <div className="bg-blue-900/20 border border-blue-800/30 rounded-lg p-4">
               <p className="text-xs text-blue-400">
-                💡 After adding ZMQ config, restart Bitcoin Core for changes to
-                take effect.
+                fter adding ZMQ config, restart Bitcoin Core for changes to take
+                effect.
               </p>
             </div>
           </div>
@@ -497,14 +505,17 @@ export default function MakerSettings() {
 
       {/* Save and Restart */}
       <div className="flex gap-3">
-        <button className="flex-1 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all font-semibold">
+        <button
+          type="button"
+          className="flex-1 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all font-semibold"
+        >
           Save & Restart Maker
         </button>
       </div>
 
       <div className="bg-blue-900/20 border border-blue-800/30 rounded-lg p-4">
         <p className="text-xs text-blue-400">
-          💡 <strong>Note:</strong> Saving will update the config.toml file and
+          <strong>Note:</strong> Saving will update the config.toml file and
           restart this maker for changes to take effect.
         </p>
       </div>
