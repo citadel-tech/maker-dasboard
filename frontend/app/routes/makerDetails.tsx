@@ -1,6 +1,7 @@
 import Nav from "../components/Nav";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+import MakerSettings from "./makerSettings";
 
 // This would come from route params in real implementation
 // For now using mock data
@@ -52,7 +53,7 @@ const mockSwapHistory = [
 export default function MakerDetails() {
   const { makerId } = useParams<{ makerId: string }>();
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "wallet" | "swaps" | "logs"
+    "dashboard" | "wallet" | "swaps" | "logs" | "settings"
   >("dashboard");
 
   // TODO: Fetch maker data based on makerId
@@ -181,6 +182,16 @@ export default function MakerDetails() {
               }`}
             >
               Logs
+            </button>
+            <button
+              onClick={() => setActiveTab("settings")}
+              className={`px-4 sm:px-6 py-3 font-medium transition-all ${
+                activeTab === "settings"
+                  ? "text-orange-500 border-b-2 border-orange-500"
+                  : "text-gray-400 hover:text-gray-100"
+              }`}
+            >
+              Settings
             </button>
           </div>
         </div>
@@ -397,6 +408,8 @@ export default function MakerDetails() {
             </div>
           </div>
         )}
+        
+        {activeTab === "settings" && <MakerSettings />}
       </main>
     </div>
   );
