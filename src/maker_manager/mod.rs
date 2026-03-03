@@ -79,7 +79,7 @@ impl MakerManager {
     /// Creates a new MakerManager with persistence at the given config directory.
     /// Loads any previously saved maker configs and re-initializes them (but does NOT start servers).
     pub fn new(config_dir: PathBuf) -> Result<Self> {
-        let persistence = PersistenceManager::new(config_dir)?;
+        let persistence = PersistenceManager::new(config_dir.clone())?;
         let saved_configs = persistence.load()?;
 
         let mut mgr = Self {
@@ -426,6 +426,14 @@ impl MakerManager {
 
     pub fn is_server_running(&mut self, id: &MakerId) -> bool {
         self.pool.is_server_running(id)
+    }
+
+    /// Returns the log file path for a given maker ID.
+    pub fn log_file_path(&self, maker_id: &str) -> std::path::PathBuf {
+        self.persistence
+            .config_dir
+            .join("logs")
+            .join(format!("maker-{}.log", maker_id))
     }
 }
 

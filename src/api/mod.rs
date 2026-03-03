@@ -42,6 +42,7 @@ pub type AppState = Arc<Mutex<MakerManager>>;
         monitoring::get_status,
         monitoring::get_swaps,
         monitoring::get_logs,
+        monitoring::get_logs_stream,
         monitoring::get_tor_address,
         monitoring::get_data_dir,
         health_check,

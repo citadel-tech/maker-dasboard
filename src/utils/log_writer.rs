@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
-use std::io::{self, Write};
+use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 use tracing_subscriber::fmt::MakeWriter;
@@ -15,7 +15,8 @@ impl Write for LogWriter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self {
             LogWriter::Tee(f, s) => {
-                f.write_all(buf)?;
+                let stripped = strip_ansi(buf);
+                f.write_all(&stripped)?;
                 s.write_all(buf)?;
                 Ok(buf.len())
             }
@@ -90,4 +91,65 @@ impl<'a> MakeWriter<'a> for MakerLogWriter {
             None => LogWriter::Stdout(io::stdout()),
         }
     }
+}
+
+/// Efficiently reads the last `n` lines from a file by seeking from the end.
+/// Returns the lines in order (oldest to newest).
+pub fn read_last_n_lines(path: &PathBuf, n: usize) -> io::Result<Vec<String>> {
+    let mut file = File::open(path)?;
+    let file_len = file.metadata()?.len();
+
+    if file_len == 0 {
+        return Ok(Vec::new());
+    }
+
+    const CHUNK_SIZE: u64 = 8192;
+    let mut newline_positions = Vec::new();
+    let mut pos = file_len;
+    let mut buf = Vec::new();
+
+    while pos > 0 && newline_positions.len() <= n {
+        let read_size = CHUNK_SIZE.min(pos);
+        pos -= read_size;
+        file.seek(SeekFrom::Start(pos))?;
+
+        let mut chunk = vec![0u8; read_size as usize];
+        file.read_exact(&mut chunk)?;
+
+        chunk.append(&mut buf);
+        buf = chunk;
+
+        newline_positions.clear();
+        newline_positions.push(0);
+        for (i, &b) in buf.iter().enumerate() {
+            if b == b'\n' && i + 1 < buf.len() {
+                newline_positions.push(i + 1);
+            }
+        }
+    }
+
+    let text = String::from_utf8_lossy(&buf);
+    let all_lines: Vec<&str> = text.lines().collect();
+    let start = all_lines.len().saturating_sub(n);
+    Ok(all_lines[start..].iter().map(|s| s.to_string()).collect())
+}
+
+/// Strips ANSI escape codes from a byte slice.
+fn strip_ansi(buf: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(buf.len());
+    let mut i = 0;
+    while i < buf.len() {
+        // ESC [ ... m  — CSI sequences
+        if buf[i] == 0x1b && buf.get(i + 1) == Some(&b'[') {
+            i += 2;
+            while i < buf.len() && !buf[i].is_ascii_alphabetic() {
+                i += 1;
+            }
+            i += 1;
+        } else {
+            out.push(buf[i]);
+            i += 1;
+        }
+    }
+    out
 }

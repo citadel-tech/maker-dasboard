@@ -260,14 +260,6 @@ impl MakerHandle {
         }
     }
 
-    /// Returns true if the shutdown flag is set
-    fn is_shutdown(&self) -> bool {
-        match self {
-            MakerHandle::Legacy(m) => m.shutdown.load(Relaxed),
-            MakerHandle::Taproot(m) => m.shutdown.load(Relaxed),
-        }
-    }
-
     /// Clones the inner Arc for spawning the server thread
     fn clone_inner(&self) -> MakerHandle {
         match self {

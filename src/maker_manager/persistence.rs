@@ -71,7 +71,7 @@ struct StoredState {
 /// This only manages the dashboard's own config (e.g. `~/.config/maker-dashboard/makers.json`).
 /// Maker wallet/data directories live under `~/.coinswap/` and are managed by coinswap itself.
 pub struct PersistenceManager {
-    config_dir: PathBuf,
+    pub config_dir: PathBuf,
 }
 
 impl PersistenceManager {
