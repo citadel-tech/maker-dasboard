@@ -93,7 +93,7 @@ export interface SendToAddressRequest {
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
-    message: string
+    message: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -151,7 +151,7 @@ function del<T>(path: string): Promise<T> {
 export function streamLogs(
   id: string,
   onLine: (line: string) => void,
-  onError?: (err: Event) => void
+  onError?: (err: Event) => void,
 ): () => void {
   const es = new EventSource(`/api/makers/${id}/logs/stream`);
   es.onmessage = (e) => onLine(e.data as string);
@@ -166,7 +166,8 @@ export const makers = {
   count: (): Promise<number> => get("/makers/count"),
   get: (id: string): Promise<MakerInfoDetailed> => get(`/makers/${id}`),
   info: (id: string): Promise<MakerInfoDetailed> => get(`/makers/${id}/info`),
-  create: (body: CreateMakerRequest): Promise<MakerInfo> => post("/makers", body),
+  create: (body: CreateMakerRequest): Promise<MakerInfo> =>
+    post("/makers", body),
   delete: (id: string): Promise<string> => del(`/makers/${id}`),
   updateConfig: (id: string, body: UpdateMakerConfigRequest): Promise<string> =>
     put(`/makers/${id}/config`, body),
@@ -180,9 +181,12 @@ export const makers = {
 export const wallet = {
   balance: (id: string): Promise<BalanceInfo> => get(`/makers/${id}/balance`),
   utxos: (id: string): Promise<UtxoInfo[]> => get(`/makers/${id}/utxos`),
-  swapUtxos: (id: string): Promise<UtxoInfo[]> => get(`/makers/${id}/utxos/swap`),
-  contractUtxos: (id: string): Promise<UtxoInfo[]> => get(`/makers/${id}/utxos/contract`),
-  fidelityUtxos: (id: string): Promise<UtxoInfo[]> => get(`/makers/${id}/utxos/fidelity`),
+  swapUtxos: (id: string): Promise<UtxoInfo[]> =>
+    get(`/makers/${id}/utxos/swap`),
+  contractUtxos: (id: string): Promise<UtxoInfo[]> =>
+    get(`/makers/${id}/utxos/contract`),
+  fidelityUtxos: (id: string): Promise<UtxoInfo[]> =>
+    get(`/makers/${id}/utxos/fidelity`),
   newAddress: (id: string): Promise<string> => get(`/makers/${id}/address`),
   send: (id: string, body: SendToAddressRequest): Promise<string> =>
     post(`/makers/${id}/send`, body),

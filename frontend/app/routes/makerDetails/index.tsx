@@ -9,7 +9,8 @@ import {
   type BalanceInfo,
   type MakerStatus,
 } from "../../api";
-import { ErrorBanner, type Tab } from "./types";
+import { type Tab } from "./types";
+import { ErrorBanner } from "./components";
 import Dashboard from "./dashboard";
 import Wallet from "./wallet";
 import Swaps from "./history";
@@ -79,7 +80,7 @@ export default function MakerDetails() {
   async function handleStartStop() {
     setActionLoading(true);
     try {
-      isRunning ? await makers.stop(id) : await makers.start(id);
+      await (isRunning ? makers.stop(id) : makers.start(id));
       await loadCore();
     } catch (e) {
       alert(e instanceof Error ? e.message : "Action failed");

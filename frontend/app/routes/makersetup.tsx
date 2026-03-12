@@ -1,14 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Nav from "../components/Nav";
-import {
-  makers,
-  monitoring,
-  wallet,
-  streamLogs,
-  ApiError,
-  satsToBtc,
-} from "../api";
+import { makers, monitoring, wallet, streamLogs, ApiError } from "../api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

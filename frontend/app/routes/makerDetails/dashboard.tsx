@@ -1,6 +1,6 @@
 import { satsToBtc } from "../../api";
-import { btcUsd, LoadingCard, type MakerCoreData } from "./types";
-
+import { LoadingCard } from "./components";
+import { btcUsd, type MakerCoreData } from "./types";
 interface Props {
   core: MakerCoreData;
 }
