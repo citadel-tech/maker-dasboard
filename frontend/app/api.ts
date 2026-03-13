@@ -108,7 +108,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...options,
   });
 
-  const body = (await res.json()) as ApiResponse<T>;
+  let body: ApiResponse<T>;
+  try {
+    body = await res.json();
+  } catch {
+    throw new ApiError(res.status, "Invalid JSON response");
+  }
 
   if (!body.success || !res.ok) {
     throw new ApiError(res.status, body.error ?? "Unknown error");

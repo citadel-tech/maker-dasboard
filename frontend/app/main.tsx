@@ -6,14 +6,17 @@ import Home from "./routes/home";
 import MakerDetails from "./routes/makerDetails";
 import AddMaker from "./routes/addMaker";
 import MakerSetup from "./routes/makersetup";
+import { StrictMode } from "react";
 
 createRoot(document.getElementById("root")!).render(
-  <BrowserRouter>
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/makerDetails/:makerId" element={<MakerDetails />} />
-      <Route path="/addMaker" element={<AddMaker />} />
-      <Route path="/makers/:makerId/setup" element={<MakerSetup />} />{" "}
-    </Routes>
-  </BrowserRouter>,
+  <StrictMode>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/makerDetails/:makerId" element={<MakerDetails />} />
+        <Route path="/addMaker" element={<AddMaker />} />
+        <Route path="/makers/:makerId/setup" element={<MakerSetup />} />
+      </Routes>
+    </BrowserRouter>
+  </StrictMode>,
 );

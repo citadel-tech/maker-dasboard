@@ -11,6 +11,7 @@ export default function Logs({ id }: Props) {
   const [dataDir, setDataDir] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const initialLoadedRef = useRef(false);
 
   useEffect(() => {
     // Fetch data dir for log path hint
@@ -19,19 +20,37 @@ export default function Logs({ id }: Props) {
       .then(setDataDir)
       .catch(() => {});
 
-    // Fetch historical lines
-    monitoring
-      .logs(id, 100)
-      .then((lines) => setLogs(lines))
-      .catch(() => {});
+    // Create a token to invalidate stale requests
+    const requestToken = { isValid: true };
+    const bufferedLines: string[] = [];
 
-    // Stream new lines live, cap buffer at 100
-    const stop = streamLogs(id, (line) =>
-      setLogs((prev) => [...prev.slice(-99), line]),
-    );
+    // Start streaming first and buffer incoming lines
+    const stop = streamLogs(id, (line) => {
+      if (requestToken.isValid) {
+        bufferedLines.push(line);
+        if (initialLoadedRef.current) {
+          setLogs((prev) => [...prev, line].slice(-100));
+        }
+      }
+    });
     setStreaming(true);
 
+    // Then fetch historical lines and merge with buffered lines
+    monitoring
+      .logs(id, 100)
+      .then((initialLines) => {
+        if (requestToken.isValid) {
+          // Merge initial lines with buffered lines, capping at 100
+          const merged = [...initialLines, ...bufferedLines].slice(-100);
+          setLogs(merged);
+          initialLoadedRef.current = true;
+        }
+      })
+      .catch(() => {});
+
     return () => {
+      // Invalidate token to prevent stale updates
+      requestToken.isValid = false;
       stop();
       setStreaming(false);
     };
