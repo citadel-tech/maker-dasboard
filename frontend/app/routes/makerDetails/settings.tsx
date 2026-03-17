@@ -109,8 +109,31 @@ export default function Settings({ id, onSaved }: Props) {
       .catch((e: Error) => setLoadError(e.message));
   }, [id]);
 
+  function validate(): string | null {
+    if (
+      networkPort === 0 ||
+      rpcPort === 0 ||
+      socksPort === 0 ||
+      controlPort === 0
+    )
+      return "Port values must be between 1 and 65535";
+    if (new Set([networkPort, rpcPort]).size !== 2)
+      return "Network Port and RPC Port must be different";
+    if (fidelityTimelock < 12960 || fidelityTimelock > 25920)
+      return "Fidelity timelock must be between 12960 and 25920 blocks";
+    if (minSwapAmount === 0)
+      return "Minimum swap amount must be greater than 0";
+    if (fidelityAmount === 0) return "Fidelity amount must be greater than 0";
+    return null;
+  }
+
   // ── Save ──────────────────────────────────────────────────────────────────
   async function handleSave() {
+    const validationError = validate();
+    if (validationError) {
+      setSaveResult({ ok: false, msg: validationError });
+      return;
+    }
     setSaving(true);
     setSaveResult(null);
     try {
@@ -376,12 +399,17 @@ export default function Settings({ id, onSaved }: Props) {
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-2">
+            <label
+              htmlFor="networkPort"
+              className="block text-sm text-gray-400 mb-2"
+            >
               Network Port
             </label>
             <input
               type="number"
               value={networkPort}
+              min={1}
+              max={65535}
               onChange={(e) => setNetworkPort(Number(e.target.value))}
               className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
             />
@@ -390,10 +418,17 @@ export default function Settings({ id, onSaved }: Props) {
             </p>
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-2">RPC Port</label>
+            <label
+              htmlFor="rpcPort"
+              className="block text-sm text-gray-400 mb-2"
+            >
+              RPC Port
+            </label>
             <input
               type="number"
               value={rpcPort}
+              min={1}
+              max={65535}
               onChange={(e) => setRpcPort(Number(e.target.value))}
               className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
             />
@@ -409,7 +444,9 @@ export default function Settings({ id, onSaved }: Props) {
         <h3 className="text-lg font-semibold mb-6">Tor Configuration</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-2">
+            <label
+              className="block text-sm text-gray-400 mb-2"
+            >
               Tor Auth Password
             </label>
             <div className="relative">
@@ -433,12 +470,17 @@ export default function Settings({ id, onSaved }: Props) {
             </p>
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-2">
+            <label
+              htmlFor="socksPort"
+              className="block text-sm text-gray-400 mb-2"
+            >
               SOCKS Port
             </label>
             <input
               type="number"
               value={socksPort}
+              min={1}
+              max={65535}
               onChange={(e) => setSocksPort(Number(e.target.value))}
               className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
             />
@@ -447,11 +489,16 @@ export default function Settings({ id, onSaved }: Props) {
             </p>
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-2">
+            <label
+              htmlFor="controlPort"
+              className="block text-sm text-gray-400 mb-2"
+            >
               Control Port
             </label>
             <input
               type="number"
+              min={1}
+              max={65535}
               value={controlPort}
               onChange={(e) => setControlPort(Number(e.target.value))}
               className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
@@ -470,33 +517,46 @@ export default function Settings({ id, onSaved }: Props) {
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-2">
+            <label
+              htmlFor="minSwapAmount"
+              className="block text-sm text-gray-400 mb-2"
+            >
               Minimum Swap Amount (sats)
             </label>
             <input
               type="number"
+              min={1}
               value={minSwapAmount}
               onChange={(e) => setMinSwapAmount(Number(e.target.value))}
               className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-2">
+            <label
+              htmlFor="baseFee"
+              className="block text-sm text-gray-400 mb-2"
+            >
               Base Fee (sats)
             </label>
             <input
               type="number"
+              min={0}
               value={baseFee}
               onChange={(e) => setBaseFee(Number(e.target.value))}
               className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-2">
+            <label
+              htmlFor="amountRelativeFeePct"
+              className="block text-sm text-gray-400 mb-2"
+            >
               Amount Relative Fee (%)
             </label>
             <input
               type="number"
+              min={0}
+              max={100}
               step="0.01"
               value={amountRelativeFeePct}
               onChange={(e) => setAmountRelativeFeePct(Number(e.target.value))}
@@ -504,22 +564,31 @@ export default function Settings({ id, onSaved }: Props) {
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-2">
+            <label
+              htmlFor="fidelityAmount"
+              className="block text-sm text-gray-400 mb-2"
+            >
               Fidelity Amount (sats)
             </label>
             <input
               type="number"
+              min={1}
               value={fidelityAmount}
               onChange={(e) => setFidelityAmount(Number(e.target.value))}
               className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-2">
+            <label
+              htmlFor="fidelityTimelock"
+              className="block text-sm text-gray-400 mb-2"
+            >
               Fidelity Timelock (blocks)
             </label>
             <input
               type="number"
+              min={12960}
+              max={25920}
               value={fidelityTimelock}
               onChange={(e) => setFidelityTimelock(Number(e.target.value))}
               className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"

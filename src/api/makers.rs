@@ -44,6 +44,65 @@ async fn list_makers(State(state): State<AppState>) -> Json<ApiResponse<Vec<Make
     Json(ApiResponse::ok(makers))
 }
 
+fn validate_maker_config(
+    network_port: u16,
+    rpc_port: u16,
+    socks_port: u16,
+    control_port: u16,
+    fidelity_timelock: u32,
+    min_swap_amount: u64,
+    fidelity_amount: u64,
+    base_fee: u64,
+) -> Result<(), String> {
+    // Ports must not be 0
+    for (name, port) in [
+        ("network_port", network_port),
+        ("rpc_port", rpc_port),
+        ("socks_port", socks_port),
+        ("control_port", control_port),
+    ] {
+        if port == 0 {
+            return Err(format!("{} must be between 1 and 65535", name));
+        }
+    }
+
+    // Ports must all be unique
+    let ports = [
+        ("network_port", network_port),
+        ("rpc_port", rpc_port),
+        ("socks_port", socks_port),
+        ("control_port", control_port),
+    ];
+    for i in 0..ports.len() {
+        for j in (i + 1)..ports.len() {
+            if ports[i].1 == ports[j].1 {
+                return Err(format!(
+                    "{} and {} cannot use the same port ({})",
+                    ports[i].0, ports[j].0, ports[i].1
+                ));
+            }
+        }
+    }
+
+    // Fidelity timelock range
+    if fidelity_timelock < 12960 || fidelity_timelock > 25920 {
+        return Err(format!(
+            "fidelity_timelock must be between 12960 and 25920, got {}",
+            fidelity_timelock
+        ));
+    }
+
+    // Amounts must be non-zero
+    if min_swap_amount == 0 {
+        return Err("min_swap_amount must be greater than 0".to_string());
+    }
+    if fidelity_amount == 0 {
+        return Err("fidelity_amount must be greater than 0".to_string());
+    }
+
+    Ok(())
+}
+
 /// Create a new maker
 #[utoipa::path(
     post, path = "/api/makers", tag = "makers",
@@ -103,6 +162,34 @@ async fn create_maker(
         base_fee: body.base_fee.unwrap_or(100),
         amount_relative_fee_pct: body.amount_relative_fee_pct.unwrap_or(0.1),
     };
+
+    if let Err(e) = validate_maker_config(
+        config.network_port,
+        config.rpc_port,
+        config.socks_port,
+        config.control_port,
+        config.fidelity_timelock,
+        config.min_swap_amount,
+        config.fidelity_amount,
+        config.base_fee,
+    ) {
+        return (StatusCode::BAD_REQUEST, Json(ApiResponse::err(e)));
+    }
+
+    for (name, port) in [
+        ("network_port", config.network_port),
+        ("rpc_port", config.rpc_port),
+    ] {
+        if mgr.is_port_in_use(port, None) {
+            return (
+                StatusCode::CONFLICT,
+                Json(ApiResponse::err(format!(
+                    "{} {} is already in use by another maker",
+                    name, port
+                ))),
+            );
+        }
+    }
 
     match mgr.create_maker(body.id.clone(), config) {
         Ok(()) => (
@@ -193,12 +280,40 @@ async fn update_config(
         None => {
             return (
                 StatusCode::NOT_FOUND,
-                Json(ApiResponse::err(format!("Maker '{}' config not found", id))),
+                Json(ApiResponse::err(format!("Maker '{}' not found", id))),
             )
         }
     };
 
     let config = body.apply_to(base);
+
+    if let Err(e) = validate_maker_config(
+        config.network_port,
+        config.rpc_port,
+        config.socks_port,
+        config.control_port,
+        config.fidelity_timelock,
+        config.min_swap_amount,
+        config.fidelity_amount,
+        config.base_fee,
+    ) {
+        return (StatusCode::BAD_REQUEST, Json(ApiResponse::err(e)));
+    }
+
+    for (name, port) in [
+        ("network_port", config.network_port),
+        ("rpc_port", config.rpc_port),
+    ] {
+        if mgr.is_port_in_use(port, Some(&id)) {
+            return (
+                StatusCode::CONFLICT,
+                Json(ApiResponse::err(format!(
+                    "{} {} is already in use by another maker",
+                    name, port
+                ))),
+            );
+        }
+    }
 
     match mgr.update_config(&id, config) {
         Ok(()) => (

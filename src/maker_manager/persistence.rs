@@ -8,6 +8,33 @@ use serde::{Deserialize, Serialize};
 use super::maker_pool::MakerId;
 use super::MakerConfig;
 
+fn default_network_port() -> u16 {
+    6102
+}
+fn default_rpc_port() -> u16 {
+    6103
+}
+fn default_socks_port() -> u16 {
+    9050
+}
+fn default_control_port() -> u16 {
+    9051
+}
+fn default_min_swap_amount() -> u64 {
+    10000
+}
+fn default_fidelity_amount() -> u64 {
+    50000
+}
+fn default_fidelity_timelock() -> u32 {
+    13104
+}
+fn default_base_fee() -> u64 {
+    100
+}
+fn default_amount_relative_fee_pct() -> f64 {
+    0.1
+}
 /// On-disk representation of a single maker's config.
 #[derive(Debug, Serialize, Deserialize)]
 struct StoredMakerConfig {
@@ -20,14 +47,23 @@ struct StoredMakerConfig {
     wallet_name: Option<String>,
     taproot: bool,
     password: Option<String>,
+    #[serde(default = "default_network_port")]
     network_port: u16,
+    #[serde(default = "default_rpc_port")]
     rpc_port: u16,
+    #[serde(default = "default_socks_port")]
     socks_port: u16,
+    #[serde(default = "default_control_port")]
     control_port: u16,
+    #[serde(default = "default_min_swap_amount")]
     min_swap_amount: u64,
+    #[serde(default = "default_fidelity_amount")]
     fidelity_amount: u64,
+    #[serde(default = "default_fidelity_timelock")]
     fidelity_timelock: u32,
+    #[serde(default = "default_base_fee")]
     base_fee: u64,
+    #[serde(default = "default_amount_relative_fee_pct")]
     amount_relative_fee_pct: f64,
 }
 

@@ -223,6 +223,17 @@ impl MakerManager {
         }
     }
 
+    pub fn is_port_in_use(&self, port: u16, exclude_id: Option<&str>) -> bool {
+        self.configs.iter().any(|(id, cfg)| {
+            if let Some(excl) = exclude_id {
+                if id.as_str() == excl {
+                    return false;
+                }
+            }
+            cfg.network_port == port || cfg.rpc_port == port
+        })
+    }
+
     /// Starts the coinswap server for a registered maker.
     /// The maker must already be created (via `create_maker`).
     pub fn start_maker(&mut self, id: &MakerId) -> Result<(), MakerManagerError> {
