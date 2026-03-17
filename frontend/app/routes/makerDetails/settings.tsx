@@ -4,6 +4,7 @@ import { makers, type MakerInfoDetailed } from "../../api";
 
 interface Props {
   id: string;
+  onSaved?: () => void;
 }
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -45,26 +46,33 @@ function EyeIcon({ open }: { open: boolean }) {
   );
 }
 
-function ComingSoonBadge() {
-  return (
-    <span className="text-xs bg-gray-700 text-gray-400 px-2 py-0.5 rounded">
-      Coming soon
-    </span>
-  );
-}
-
-export default function Settings({ id }: Props) {
+export default function Settings({ id, onSaved }: Props) {
+  const navigate = useNavigate();
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // ── Form fields ───────────────────────────────────────────────────────────
+  // ── Bitcoin Core RPC ──────────────────────────────────────────────────────
   const [rpc, setRpc] = useState("");
   const [zmq, setZmq] = useState("");
   const [rpcUser, setRpcUser] = useState("");
   const [rpcPassword, setRpcPassword] = useState("");
-  const [torAuth, setTorAuth] = useState("");
-  const [walletName, setWalletName] = useState("");
   const [taproot, setTaproot] = useState(false);
   const [dataDir, setDataDir] = useState("");
+
+  // ── Tor ───────────────────────────────────────────────────────────────────
+  const [torAuth, setTorAuth] = useState("");
+  const [socksPort, setSocksPort] = useState(9050);
+  const [controlPort, setControlPort] = useState(9051);
+
+  // ── Network ports ─────────────────────────────────────────────────────────
+  const [networkPort, setNetworkPort] = useState(6102);
+  const [rpcPort, setRpcPort] = useState(6103);
+
+  // ── Swap & Fidelity ───────────────────────────────────────────────────────
+  const [minSwapAmount, setMinSwapAmount] = useState(10000);
+  const [baseFee, setBaseFee] = useState(100);
+  const [amountRelativeFeePct, setAmountRelativeFeePct] = useState(0.1);
+  const [fidelityAmount, setFidelityAmount] = useState(50000);
+  const [fidelityTimelock, setFidelityTimelock] = useState(13104);
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [showRpcPassword, setShowRpcPassword] = useState(false);
@@ -77,7 +85,6 @@ export default function Settings({ id }: Props) {
   const [copied, setCopied] = useState(false);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [removing, setRemoving] = useState(false);
-  const navigate = useNavigate();
 
   // ── Load ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -86,16 +93,47 @@ export default function Settings({ id }: Props) {
       .then((info: MakerInfoDetailed) => {
         setRpc(info.rpc ?? "");
         setZmq(info.zmq ?? "");
-        setWalletName(info.wallet_name ?? "");
         setTaproot(info.taproot ?? false);
         setDataDir(info.data_directory ?? "");
-        // rpc_user / rpc_password / tor_auth are write-only — not returned by the API
+        setNetworkPort(info.network_port ?? 6102);
+        setRpcPort(info.rpc_port ?? 6103);
+        setSocksPort(info.socks_port ?? 9050);
+        setControlPort(info.control_port ?? 9051);
+        setMinSwapAmount(info.min_swap_amount ?? 10000);
+        setBaseFee(info.base_fee ?? 100);
+        setAmountRelativeFeePct(info.amount_relative_fee_pct ?? 0.1);
+        setFidelityAmount(info.fidelity_amount ?? 50000);
+        setFidelityTimelock(info.fidelity_timelock ?? 13104);
+        // passwords / ports not returned by API — keep defaults
       })
       .catch((e: Error) => setLoadError(e.message));
   }, [id]);
 
+  function validate(): string | null {
+    if (
+      networkPort === 0 ||
+      rpcPort === 0 ||
+      socksPort === 0 ||
+      controlPort === 0
+    )
+      return "Port values must be between 1 and 65535";
+    if (new Set([networkPort, rpcPort]).size !== 2)
+      return "Network Port and RPC Port must be different";
+    if (fidelityTimelock < 12960 || fidelityTimelock > 25920)
+      return "Fidelity timelock must be between 12960 and 25920 blocks";
+    if (minSwapAmount === 0)
+      return "Minimum swap amount must be greater than 0";
+    if (fidelityAmount === 0) return "Fidelity amount must be greater than 0";
+    return null;
+  }
+
   // ── Save ──────────────────────────────────────────────────────────────────
   async function handleSave() {
+    const validationError = validate();
+    if (validationError) {
+      setSaveResult({ ok: false, msg: validationError });
+      return;
+    }
     setSaving(true);
     setSaveResult(null);
     try {
@@ -105,13 +143,26 @@ export default function Settings({ id }: Props) {
         rpc_user: rpcUser || undefined,
         rpc_password: rpcPassword || undefined,
         tor_auth: torAuth || undefined,
-        wallet_name: walletName || undefined,
         taproot,
         data_directory: dataDir || undefined,
+        network_port: networkPort,
+        rpc_port: rpcPort,
+        socks_port: socksPort,
+        control_port: controlPort,
+        min_swap_amount: minSwapAmount,
+        fidelity_amount: fidelityAmount,
+        fidelity_timelock: fidelityTimelock,
+        base_fee: baseFee,
+        amount_relative_fee_pct: amountRelativeFeePct,
       });
-      setSaveResult({ ok: true, msg: "Config saved. Maker is restarting…" });
+
+      setSaveResult({
+        ok: true,
+        msg: "Config saved — maker is stopping, rewriting config.toml, and restarting…",
+      });
       setRpcPassword("");
       setTorAuth("");
+      setTimeout(() => onSaved?.(), 2000);
     } catch (e) {
       setSaveResult({
         ok: false,
@@ -164,15 +215,13 @@ export default function Settings({ id }: Props) {
               type="text"
               value={rpc}
               onChange={(e) => setRpc(e.target.value)}
-              placeholder="127.0.0.1:38332"
+              placeholder="127.0.0.1:18443"
               className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono text-sm"
             />
             <p className="text-xs text-gray-500 mt-1">
-              host:port — 8332 mainnet · 18332 testnet · 18443 regtest · 38332
-              signet
+              8332 mainnet · 18332 testnet · 18443 regtest · 38332 signet
             </p>
           </div>
-
           <div>
             <label className="block text-sm text-gray-400 mb-2">
               RPC Username
@@ -185,7 +234,6 @@ export default function Settings({ id }: Props) {
               className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100"
             />
           </div>
-
           <div>
             <label className="block text-sm text-gray-400 mb-2">
               RPC Password
@@ -210,20 +258,6 @@ export default function Settings({ id }: Props) {
               Username and password must be provided together
             </p>
           </div>
-
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">
-              Wallet Name
-            </label>
-            <input
-              type="text"
-              value={walletName}
-              onChange={(e) => setWalletName(e.target.value)}
-              placeholder="Optional"
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100"
-            />
-          </div>
-
           <div>
             <label className="block text-sm text-gray-400 mb-2">
               Data Directory
@@ -236,9 +270,8 @@ export default function Settings({ id }: Props) {
               className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono text-sm"
             />
           </div>
-
-          <div className="sm:col-span-2">
-            <div className="flex items-center justify-between bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 max-w-xs">
+          <div className="flex items-end">
+            <div className="flex items-center justify-between bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 w-full">
               <div>
                 <div className="text-sm text-gray-200">Taproot</div>
                 <div className="text-xs text-gray-500">
@@ -248,14 +281,10 @@ export default function Settings({ id }: Props) {
               <button
                 type="button"
                 onClick={() => setTaproot(!taproot)}
-                className={`relative w-11 h-6 rounded-full transition-colors ml-6 ${
-                  taproot ? "bg-orange-500" : "bg-gray-600"
-                }`}
+                className={`relative w-11 h-6 rounded-full transition-colors ml-4 shrink-0 ${taproot ? "bg-orange-500" : "bg-gray-600"}`}
               >
                 <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    taproot ? "translate-x-5" : "translate-x-0"
-                  }`}
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${taproot ? "translate-x-5" : "translate-x-0"}`}
                 />
               </button>
             </div>
@@ -267,7 +296,9 @@ export default function Settings({ id }: Props) {
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
         <div className="flex items-center gap-3 mb-6">
           <h3 className="text-lg font-semibold">Test Connection</h3>
-          <ComingSoonBadge />
+          <span className="text-xs bg-gray-700 text-gray-400 px-2 py-0.5 rounded">
+            Coming soon
+          </span>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
@@ -294,7 +325,6 @@ export default function Settings({ id }: Props) {
               ))}
             </div>
           </div>
-
           <div className="flex flex-col justify-center gap-3">
             <p className="text-sm text-gray-400">
               Tests connectivity to the configured Bitcoin Core RPC endpoint and
@@ -340,7 +370,6 @@ export default function Settings({ id }: Props) {
               </p>
             </div>
           </div>
-
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-gray-300">
               bitcoin.conf snippet
@@ -357,6 +386,55 @@ export default function Settings({ id }: Props) {
             >
               {copied ? "Copied!" : "Copy ZMQ Config"}
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Network Ports ─────────────────────────────────────────────────── */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
+        <h3 className="text-lg font-semibold mb-2">Network Ports</h3>
+        <p className="text-sm text-gray-400 mb-6">
+          Each maker must use unique ports to avoid clashes when running
+          multiple makers on the same machine.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label
+              htmlFor="networkPort"
+              className="block text-sm text-gray-400 mb-2"
+            >
+              Network Port
+            </label>
+            <input
+              type="number"
+              value={networkPort}
+              min={1}
+              max={65535}
+              onChange={(e) => setNetworkPort(Number(e.target.value))}
+              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Port for coinswap client connections (default 6102)
+            </p>
+          </div>
+          <div>
+            <label
+              htmlFor="rpcPort"
+              className="block text-sm text-gray-400 mb-2"
+            >
+              RPC Port
+            </label>
+            <input
+              type="number"
+              value={rpcPort}
+              min={1}
+              max={65535}
+              onChange={(e) => setRpcPort(Number(e.target.value))}
+              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Port for maker-cli operations (default 6103)
+            </p>
           </div>
         </div>
       </div>
@@ -389,71 +467,134 @@ export default function Settings({ id }: Props) {
               Authentication password for Tor control port
             </p>
           </div>
-
-          <div className="opacity-50">
-            <div className="flex items-center gap-2 mb-2">
-              <label className="block text-sm text-gray-400">SOCKS Port</label>
-              <ComingSoonBadge />
-            </div>
+          <div>
+            <label
+              htmlFor="socksPort"
+              className="block text-sm text-gray-400 mb-2"
+            >
+              SOCKS Port
+            </label>
             <input
               type="number"
-              defaultValue="9050"
-              disabled
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-100 cursor-not-allowed"
+              value={socksPort}
+              min={1}
+              max={65535}
+              onChange={(e) => setSocksPort(Number(e.target.value))}
+              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
             />
             <p className="text-xs text-gray-500 mt-1">
-              SOCKS5 proxy port for Tor
+              SOCKS5 proxy port for Tor (default 9050)
             </p>
           </div>
-
-          <div className="opacity-50">
-            <div className="flex items-center gap-2 mb-2">
-              <label className="block text-sm text-gray-400">
-                Control Port
-              </label>
-              <ComingSoonBadge />
-            </div>
+          <div>
+            <label
+              htmlFor="controlPort"
+              className="block text-sm text-gray-400 mb-2"
+            >
+              Control Port
+            </label>
             <input
               type="number"
-              defaultValue="9051"
-              disabled
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-100 cursor-not-allowed"
+              min={1}
+              max={65535}
+              value={controlPort}
+              onChange={(e) => setControlPort(Number(e.target.value))}
+              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Control port for Tor interface
+              Control port for Tor interface (default 9051)
             </p>
           </div>
         </div>
       </div>
 
       {/* ── Swap & Fidelity ───────────────────────────────────────────────── */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6 opacity-60">
-        <div className="flex items-center gap-3 mb-6">
-          <h3 className="text-lg font-semibold">
-            Swap & Fidelity Configuration
-          </h3>
-          <ComingSoonBadge />
-        </div>
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
+        <h3 className="text-lg font-semibold mb-6">
+          Swap & Fidelity Configuration
+        </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[
-            ["Minimum Swap Amount (sats)", "10000"],
-            ["Base Fee (sats)", "100"],
-            ["Amount Relative Fee (%)", "0.1"],
-            ["Fidelity Amount (sats)", "50000"],
-            ["Fidelity Timelock (blocks)", "13104"],
-          ].map(([label, val]) => (
-            <div key={label}>
-              <label className="block text-sm text-gray-400 mb-2">
-                {label}
-              </label>
-              <input
-                type="number"
-                defaultValue={val}
-                disabled
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-100 cursor-not-allowed"
-              />
-            </div>
-          ))}
+          <div>
+            <label
+              htmlFor="minSwapAmount"
+              className="block text-sm text-gray-400 mb-2"
+            >
+              Minimum Swap Amount (sats)
+            </label>
+            <input
+              type="number"
+              min={1}
+              value={minSwapAmount}
+              onChange={(e) => setMinSwapAmount(Number(e.target.value))}
+              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="baseFee"
+              className="block text-sm text-gray-400 mb-2"
+            >
+              Base Fee (sats)
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={baseFee}
+              onChange={(e) => setBaseFee(Number(e.target.value))}
+              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="amountRelativeFeePct"
+              className="block text-sm text-gray-400 mb-2"
+            >
+              Amount Relative Fee (%)
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step="0.01"
+              value={amountRelativeFeePct}
+              onChange={(e) => setAmountRelativeFeePct(Number(e.target.value))}
+              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="fidelityAmount"
+              className="block text-sm text-gray-400 mb-2"
+            >
+              Fidelity Amount (sats)
+            </label>
+            <input
+              type="number"
+              min={1}
+              value={fidelityAmount}
+              onChange={(e) => setFidelityAmount(Number(e.target.value))}
+              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="fidelityTimelock"
+              className="block text-sm text-gray-400 mb-2"
+            >
+              Fidelity Timelock (blocks)
+            </label>
+            <input
+              type="number"
+              min={12960}
+              max={25920}
+              value={fidelityTimelock}
+              onChange={(e) => setFidelityTimelock(Number(e.target.value))}
+              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none text-gray-100 font-mono"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Must be between 12960 and 25920 blocks
+            </p>
+          </div>
         </div>
       </div>
 
@@ -483,9 +624,11 @@ export default function Settings({ id }: Props) {
 
       <div className="bg-blue-900/20 border border-blue-800/30 rounded-lg p-4">
         <p className="text-xs text-blue-400">
-          <strong>Note:</strong> Saving will update the config and restart this
-          maker. Password fields are write-only — leave blank to keep the
-          current value.
+          <strong>Note:</strong> Saving stops the maker, writes the new config
+          to <code className="bg-blue-900/30 px-1 rounded">config.toml</code>,
+          then restarts it automatically. Password fields are write-only — leave
+          blank to keep the current value. Make sure each maker uses unique
+          network and RPC ports.
         </p>
       </div>
 
@@ -514,49 +657,59 @@ export default function Settings({ id }: Props) {
               Before you continue, please understand what this does and doesn't
               do.
             </p>
-
             <div className="space-y-3 mb-6">
-              <div className="flex gap-3 bg-gray-800 rounded-lg p-3">
-                <span className="text-green-400 mt-0.5">✓</span>
-                <p className="text-sm text-gray-300">
-                  Removes <strong className="text-white">{id}</strong> from this
-                  dashboard
-                </p>
-              </div>
-              <div className="flex gap-3 bg-gray-800 rounded-lg p-3">
-                <span className="text-green-400 mt-0.5">✓</span>
-                <p className="text-sm text-gray-300">
-                  Stops the maker process if it is currently running
-                </p>
-              </div>
-              <div className="flex gap-3 bg-gray-800 rounded-lg p-3">
-                <span className="text-red-400 mt-0.5">✗</span>
-                <p className="text-sm text-gray-300">
-                  Does <strong className="text-white">not</strong> delete your
-                  wallet or funds — those remain in the data directory
-                </p>
-              </div>
-              <div className="flex gap-3 bg-gray-800 rounded-lg p-3">
-                <span className="text-red-400 mt-0.5">✗</span>
-                <p className="text-sm text-gray-300">
-                  Does <strong className="text-white">not</strong> affect any
-                  on-chain state, fidelity bonds, or coinswap history
-                </p>
-              </div>
-              <div className="flex gap-3 bg-gray-800 rounded-lg p-3">
-                <span className="text-red-400 mt-0.5">✗</span>
-                <p className="text-sm text-gray-300">
-                  Cannot undo blockchain transactions — nothing on-chain is ever
-                  "deleted"
-                </p>
-              </div>
+              {[
+                {
+                  icon: "✓",
+                  color: "text-green-400",
+                  text: (
+                    <>
+                      Removes <strong className="text-white">{id}</strong> from
+                      this dashboard
+                    </>
+                  ),
+                },
+                {
+                  icon: "✓",
+                  color: "text-green-400",
+                  text: "Stops the maker process if it is currently running",
+                },
+                {
+                  icon: "✗",
+                  color: "text-red-400",
+                  text: (
+                    <>
+                      <strong className="text-white">Does not</strong> delete
+                      your wallet or funds — those remain in the data directory
+                    </>
+                  ),
+                },
+                {
+                  icon: "✗",
+                  color: "text-red-400",
+                  text: (
+                    <>
+                      <strong className="text-white">Does not</strong> affect
+                      any on-chain state, fidelity bonds, or coinswap history
+                    </>
+                  ),
+                },
+                {
+                  icon: "✗",
+                  color: "text-red-400",
+                  text: 'Cannot undo blockchain transactions — nothing on-chain is ever "deleted"',
+                },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-3 bg-gray-800 rounded-lg p-3">
+                  <span className={`${item.color} mt-0.5`}>{item.icon}</span>
+                  <p className="text-sm text-gray-300">{item.text}</p>
+                </div>
+              ))}
             </div>
-
             <p className="text-xs text-gray-500 mb-6">
               You can re-add this maker at any time by pointing to the same data
               directory.
             </p>
-
             <div className="flex gap-3">
               <button
                 type="button"

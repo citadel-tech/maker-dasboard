@@ -73,7 +73,7 @@ impl MakerLogWriter {
         let mut cache = file_cache().lock().unwrap();
         let path = cache
             .entry(maker_id.to_string())
-            .or_insert_with(|| self.log_dir.join(format!("maker-{}.log", maker_id)));
+            .or_insert_with(|| self.log_dir.join(format!("maker-{maker_id}.log")));
 
         OpenOptions::new().create(true).append(true).open(path)
     }

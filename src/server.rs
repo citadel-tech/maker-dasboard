@@ -99,11 +99,7 @@ impl Server {
         tracing::info!("API docs available at http://{}/swagger-ui/", addr);
 
         let listener = tokio::net::TcpListener::bind(addr).await.map_err(|e| {
-            anyhow::anyhow!(
-                "Failed to bind to {}. Is the port already in use? {}",
-                addr,
-                e
-            )
+            anyhow::anyhow!("Failed to bind to {addr}. Is the port already in use? {e}")
         })?;
 
         axum::serve(

@@ -47,7 +47,7 @@ async fn get_status(
     if !state.lock().await.has_maker(&id) {
         return (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         );
     }
     let alive = state.lock().await.ping(&id).await.is_ok();
@@ -81,7 +81,7 @@ async fn get_swaps(
     if !state.lock().await.has_maker(&id) {
         return (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         );
     }
     (
@@ -116,7 +116,7 @@ async fn get_logs(
     if !manager.has_maker(&id) {
         return (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         );
     }
 
@@ -132,7 +132,7 @@ async fn get_logs(
         }
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::err(format!("Failed to read logs: {}", e))),
+            Json(ApiResponse::err(format!("Failed to read logs: {e}"))),
         ),
     }
 }
@@ -159,7 +159,7 @@ async fn get_logs_stream(
     if !manager.has_maker(&id) {
         return Err((
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         ));
     }
     let log_path = manager.log_file_path(&id);
@@ -218,7 +218,7 @@ async fn get_tor_address(
     if !state.lock().await.has_maker(&id) {
         return (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         );
     }
     match state.lock().await.get_tor_address(&id).await {
@@ -230,7 +230,7 @@ async fn get_tor_address(
         }
         Ok(other) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::err(format!("Unexpected response: {}", other))),
+            Json(ApiResponse::err(format!("Unexpected response: {other}"))),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -257,7 +257,7 @@ async fn get_data_dir(
     if !state.lock().await.has_maker(&id) {
         return (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         );
     }
     match state.lock().await.get_data_dir(&id).await {
@@ -270,7 +270,7 @@ async fn get_data_dir(
         }
         Ok(other) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::err(format!("Unexpected response: {}", other))),
+            Json(ApiResponse::err(format!("Unexpected response: {other}"))),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,

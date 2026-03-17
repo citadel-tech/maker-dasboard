@@ -8,6 +8,33 @@ use serde::{Deserialize, Serialize};
 use super::maker_pool::MakerId;
 use super::MakerConfig;
 
+fn default_network_port() -> u16 {
+    6102
+}
+fn default_rpc_port() -> u16 {
+    6103
+}
+fn default_socks_port() -> u16 {
+    9050
+}
+fn default_control_port() -> u16 {
+    9051
+}
+fn default_min_swap_amount() -> u64 {
+    10000
+}
+fn default_fidelity_amount() -> u64 {
+    50000
+}
+fn default_fidelity_timelock() -> u32 {
+    13104
+}
+fn default_base_fee() -> u64 {
+    100
+}
+fn default_amount_relative_fee_pct() -> f64 {
+    0.1
+}
 /// On-disk representation of a single maker's config.
 #[derive(Debug, Serialize, Deserialize)]
 struct StoredMakerConfig {
@@ -20,8 +47,24 @@ struct StoredMakerConfig {
     wallet_name: Option<String>,
     taproot: bool,
     password: Option<String>,
-    network_port: Option<u16>,
-    rpc_port: Option<u16>,
+    #[serde(default = "default_network_port")]
+    network_port: u16,
+    #[serde(default = "default_rpc_port")]
+    rpc_port: u16,
+    #[serde(default = "default_socks_port")]
+    socks_port: u16,
+    #[serde(default = "default_control_port")]
+    control_port: u16,
+    #[serde(default = "default_min_swap_amount")]
+    min_swap_amount: u64,
+    #[serde(default = "default_fidelity_amount")]
+    fidelity_amount: u64,
+    #[serde(default = "default_fidelity_timelock")]
+    fidelity_timelock: u32,
+    #[serde(default = "default_base_fee")]
+    base_fee: u64,
+    #[serde(default = "default_amount_relative_fee_pct")]
+    amount_relative_fee_pct: f64,
 }
 
 impl From<&MakerConfig> for StoredMakerConfig {
@@ -42,6 +85,13 @@ impl From<&MakerConfig> for StoredMakerConfig {
             password: c.password.clone(),
             network_port: c.network_port,
             rpc_port: c.rpc_port,
+            socks_port: c.socks_port,
+            control_port: c.control_port,
+            min_swap_amount: c.min_swap_amount,
+            fidelity_amount: c.fidelity_amount,
+            fidelity_timelock: c.fidelity_timelock,
+            base_fee: c.base_fee,
+            amount_relative_fee_pct: c.amount_relative_fee_pct,
         }
     }
 }
@@ -62,10 +112,16 @@ impl From<StoredMakerConfig> for MakerConfig {
             password: s.password,
             network_port: s.network_port,
             rpc_port: s.rpc_port,
+            socks_port: s.socks_port,
+            control_port: s.control_port,
+            min_swap_amount: s.min_swap_amount,
+            fidelity_amount: s.fidelity_amount,
+            fidelity_timelock: s.fidelity_timelock,
+            base_fee: s.base_fee,
+            amount_relative_fee_pct: s.amount_relative_fee_pct,
         }
     }
 }
-
 /// On-disk representation of all maker registrations
 #[derive(Debug, Serialize, Deserialize)]
 struct StoredState {
