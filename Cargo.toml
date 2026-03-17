@@ -4,6 +4,10 @@ version = "0.1.0-alpha"
 edition = "2021"
 authors = ["Citadel-tech Team"]
 
+[features]
+# Enable with: cargo test --features integration-test
+integration-test = ["coinswap/integration-test"]
+
 [dependencies]
 axum = "0.8"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
@@ -21,4 +25,15 @@ thiserror = "2.0.18"
 futures = "0.3.32"
 clap = { version = "4.5.60", features = ["derive", "env"] }
 dirs = "6.0.0"
-tracing-appender = "0.2.4"
+
+[[test]]
+name = "api"
+path = "tests/api/mod.rs"
+
+[dev-dependencies]
+ureq = { version = "2", features = ["json"] }
+bitcoind = { version = "0.36", features = [] }
+bitcoin = { version = "0.32" }
+log = "0.4"
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
