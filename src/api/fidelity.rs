@@ -31,7 +31,7 @@ async fn list_fidelity(
     if !state.lock().await.has_maker(&id) {
         return (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         );
     }
     match state.lock().await.list_fidelity(&id).await {
@@ -41,7 +41,7 @@ async fn list_fidelity(
         }
         Ok(other) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::err(format!("Unexpected response: {}", other))),
+            Json(ApiResponse::err(format!("Unexpected response: {other}"))),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,

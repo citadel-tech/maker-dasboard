@@ -174,7 +174,7 @@ impl MakerManager {
                     #[cfg(feature = "integration-test")]
                     None,
                 )
-                .map_err(|e| anyhow!("Failed to initialize taproot maker: {:?}", e))?,
+                .map_err(|e| anyhow!("Failed to initialize taproot maker: {e:?}"))?,
             );
             self.pool
                 .spawn_maker(id.clone(), MakerInner::Taproot(maker))?;
@@ -193,7 +193,7 @@ impl MakerManager {
                     config.zmq.clone(),
                     config.password.clone(),
                 )
-                .map_err(|e| anyhow!("Failed to initialize maker: {:?}", e))?,
+                .map_err(|e| anyhow!("Failed to initialize maker: {e:?}"))?,
             );
             self.pool
                 .spawn_maker(id.clone(), MakerInner::Legacy(maker))?;
@@ -245,8 +245,7 @@ impl MakerManager {
         }
         if !self.pool.contains(id) {
             return Err(MakerManagerError::Other(anyhow!(
-                "Maker '{}' is not registered in the pool (needs re-init)",
-                id
+                "Maker '{id}' is not registered in the pool (needs re-init)"
             )));
         }
         self.pool.start_server(id).map_err(MakerManagerError::Other)
@@ -367,7 +366,7 @@ impl MakerManager {
             .configs
             .get(id)
             .cloned()
-            .ok_or_else(|| anyhow!("Maker with id '{}' not found", id))?;
+            .ok_or_else(|| anyhow!("Maker with id '{id}' not found"))?;
         let was_running = self.pool.is_server_running(id);
 
         // If only stopped, we can just update the config without re-init
@@ -405,10 +404,7 @@ impl MakerManager {
                 );
                 if let Err(restore_err) = self.create_maker_internal(id.clone(), previous, true) {
                     return Err(anyhow!(
-                        "Failed to update maker '{}': {}; rollback also failed: {}",
-                        id,
-                        e,
-                        restore_err
+                        "Failed to update maker '{id}': {e}; rollback also failed: {restore_err}"
                     ));
                 }
                 if was_running {
@@ -466,7 +462,7 @@ impl MakerManager {
         self.persistence
             .config_dir
             .join("logs")
-            .join(format!("maker-{}.log", maker_id))
+            .join(format!("maker-{maker_id}.log"))
     }
 }
 

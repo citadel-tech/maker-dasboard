@@ -101,14 +101,14 @@ impl std::fmt::Display for MessageResponse {
                     "spendable": balances.spendable.to_sat(),
                 }))
                 .map_err(|_| std::fmt::Error)?;
-                write!(f, "{}", json)
+                write!(f, "{json}")
             }
             Self::UtxoResp { utxos }
             | Self::SwapUtxoResp { utxos }
             | Self::FidelityUtxoResp { utxos }
             | Self::ContractUtxoResp { utxos } => {
                 let json = serde_json::to_string_pretty(utxos).map_err(|_| std::fmt::Error)?;
-                write!(f, "{}", json)
+                write!(f, "{json}")
             }
             Self::SendToAddressResp(tx_hex) => write!(f, "{tx_hex}"),
             Self::GetTorAddressResp(addr) => write!(f, "{addr}"),

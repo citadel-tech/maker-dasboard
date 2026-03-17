@@ -44,34 +44,23 @@ async fn list_makers(State(state): State<AppState>) -> Json<ApiResponse<Vec<Make
     Json(ApiResponse::ok(makers))
 }
 
-fn validate_maker_config(
-    network_port: u16,
-    rpc_port: u16,
-    socks_port: u16,
-    control_port: u16,
-    fidelity_timelock: u32,
-    min_swap_amount: u64,
-    fidelity_amount: u64,
-    base_fee: u64,
-) -> Result<(), String> {
-    // Ports must not be 0
+fn validate_maker_config(config: &MakerConfig) -> Result<(), String> {
     for (name, port) in [
-        ("network_port", network_port),
-        ("rpc_port", rpc_port),
-        ("socks_port", socks_port),
-        ("control_port", control_port),
+        ("network_port", config.network_port),
+        ("rpc_port", config.rpc_port),
+        ("socks_port", config.socks_port),
+        ("control_port", config.control_port),
     ] {
         if port == 0 {
-            return Err(format!("{} must be between 1 and 65535", name));
+            return Err(format!("{name} must be between 1 and 65535"));
         }
     }
 
-    // Ports must all be unique
     let ports = [
-        ("network_port", network_port),
-        ("rpc_port", rpc_port),
-        ("socks_port", socks_port),
-        ("control_port", control_port),
+        ("network_port", config.network_port),
+        ("rpc_port", config.rpc_port),
+        ("socks_port", config.socks_port),
+        ("control_port", config.control_port),
     ];
     for i in 0..ports.len() {
         for j in (i + 1)..ports.len() {
@@ -84,25 +73,22 @@ fn validate_maker_config(
         }
     }
 
-    // Fidelity timelock range
-    if fidelity_timelock < 12960 || fidelity_timelock > 25920 {
+    if !(12960..=25920).contains(&config.fidelity_timelock) {
         return Err(format!(
             "fidelity_timelock must be between 12960 and 25920, got {}",
-            fidelity_timelock
+            config.fidelity_timelock
         ));
     }
 
-    // Amounts must be non-zero
-    if min_swap_amount == 0 {
+    if config.min_swap_amount == 0 {
         return Err("min_swap_amount must be greater than 0".to_string());
     }
-    if fidelity_amount == 0 {
+    if config.fidelity_amount == 0 {
         return Err("fidelity_amount must be greater than 0".to_string());
     }
 
     Ok(())
 }
-
 /// Create a new maker
 #[utoipa::path(
     post, path = "/api/makers", tag = "makers",
@@ -163,16 +149,7 @@ async fn create_maker(
         amount_relative_fee_pct: body.amount_relative_fee_pct.unwrap_or(0.1),
     };
 
-    if let Err(e) = validate_maker_config(
-        config.network_port,
-        config.rpc_port,
-        config.socks_port,
-        config.control_port,
-        config.fidelity_timelock,
-        config.min_swap_amount,
-        config.fidelity_amount,
-        config.base_fee,
-    ) {
+    if let Err(e) = validate_maker_config(&config) {
         return (StatusCode::BAD_REQUEST, Json(ApiResponse::err(e)));
     }
 
@@ -184,8 +161,7 @@ async fn create_maker(
             return (
                 StatusCode::CONFLICT,
                 Json(ApiResponse::err(format!(
-                    "{} {} is already in use by another maker",
-                    name, port
+                    "{name} {port} is already in use by another maker"
                 ))),
             );
         }
@@ -225,7 +201,7 @@ async fn get_maker(
     } else {
         (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         )
     }
 }
@@ -247,12 +223,12 @@ async fn delete_maker(
     if mgr.remove_maker(&id) {
         (
             StatusCode::OK,
-            Json(ApiResponse::ok(format!("Maker '{}' removed", id))),
+            Json(ApiResponse::ok(format!("Maker '{id}' removed"))),
         )
     } else {
         (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         )
     }
 }
@@ -280,23 +256,14 @@ async fn update_config(
         None => {
             return (
                 StatusCode::NOT_FOUND,
-                Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+                Json(ApiResponse::err(format!("Maker '{id}' not found"))),
             )
         }
     };
 
     let config = body.apply_to(base);
 
-    if let Err(e) = validate_maker_config(
-        config.network_port,
-        config.rpc_port,
-        config.socks_port,
-        config.control_port,
-        config.fidelity_timelock,
-        config.min_swap_amount,
-        config.fidelity_amount,
-        config.base_fee,
-    ) {
+    if let Err(e) = validate_maker_config(&config) {
         return (StatusCode::BAD_REQUEST, Json(ApiResponse::err(e)));
     }
 
@@ -308,8 +275,7 @@ async fn update_config(
             return (
                 StatusCode::CONFLICT,
                 Json(ApiResponse::err(format!(
-                    "{} {} is already in use by another maker",
-                    name, port
+                    "{name} {port} is already in use by another maker"
                 ))),
             );
         }
@@ -319,15 +285,13 @@ async fn update_config(
         Ok(()) => (
             StatusCode::OK,
             Json(ApiResponse::ok(format!(
-                "Maker '{}' restarted with updated config",
-                id
+                "Maker '{id}' restarted with updated config"
             ))),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiResponse::err(format!(
-                "Failed to update maker '{}': {}",
-                id, e
+                "Failed to update maker '{id}': {e}"
             ))),
         ),
     }
@@ -351,7 +315,7 @@ async fn get_maker_info(
         Some(info) => (StatusCode::OK, Json(ApiResponse::ok(info.into()))),
         None => (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         ),
     }
 }
@@ -385,18 +349,15 @@ async fn start_maker(
     match mgr.start_maker(&id) {
         Ok(()) => (
             StatusCode::OK,
-            Json(ApiResponse::ok(format!("Maker '{}' started", id))),
+            Json(ApiResponse::ok(format!("Maker '{id}' started"))),
         ),
         Err(MakerManagerError::NotFound(_)) => (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         ),
         Err(MakerManagerError::AlreadyRunning(_)) => (
             StatusCode::CONFLICT,
-            Json(ApiResponse::err(format!(
-                "Maker '{}' is already running",
-                id
-            ))),
+            Json(ApiResponse::err(format!("Maker '{id}' is already running"))),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -424,18 +385,15 @@ async fn stop_maker(
     match mgr.stop_maker(&id) {
         Ok(()) => (
             StatusCode::OK,
-            Json(ApiResponse::ok(format!("Maker '{}' stopped", id))),
+            Json(ApiResponse::ok(format!("Maker '{id}' stopped"))),
         ),
         Err(MakerManagerError::NotFound(_)) => (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         ),
         Err(MakerManagerError::AlreadyStopped(_)) => (
             StatusCode::CONFLICT,
-            Json(ApiResponse::err(format!(
-                "Maker '{}' is already stopped",
-                id
-            ))),
+            Json(ApiResponse::err(format!("Maker '{id}' is already stopped"))),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -462,11 +420,11 @@ async fn restart_maker(
     match mgr.restart_maker(&id) {
         Ok(()) => (
             StatusCode::OK,
-            Json(ApiResponse::ok(format!("Maker '{}' restarted", id))),
+            Json(ApiResponse::ok(format!("Maker '{id}' restarted"))),
         ),
         Err(MakerManagerError::NotFound(_)) => (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,

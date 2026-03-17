@@ -126,8 +126,7 @@ fn handle_request(
                 Ok(a) => a.assume_checked(),
                 Err(e) => {
                     return Ok(MessageResponse::ServerError(format!(
-                        "Invalid address: {}",
-                        e
+                        "Invalid address: {e}"
                     )))
                 }
             };
@@ -141,15 +140,13 @@ fn handle_request(
                     Ok(coins) => coins,
                     Err(e) => {
                         return Ok(MessageResponse::ServerError(format!(
-                            "Coin selection failed: {:?}",
-                            e
+                            "Coin selection failed: {e:?}"
                         )))
                     }
                 },
                 Err(e) => {
                     return Ok(MessageResponse::ServerError(format!(
-                        "Wallet lock failed: {}",
-                        e
+                        "Wallet lock failed: {e}"
                     )))
                 }
             };
@@ -159,16 +156,14 @@ fn handle_request(
                         Ok(tx) => tx,
                         Err(e) => {
                             return Ok(MessageResponse::ServerError(format!(
-                                "Transaction building failed: {:?}",
-                                e
+                                "Transaction building failed: {e:?}"
                             )))
                         }
                     }
                 }
                 Err(e) => {
                     return Ok(MessageResponse::ServerError(format!(
-                        "Wallet lock failed: {}",
-                        e
+                        "Wallet lock failed: {e}"
                     )))
                 }
             };
@@ -177,31 +172,25 @@ fn handle_request(
                     Ok(txid) => txid,
                     Err(e) => {
                         return Ok(MessageResponse::ServerError(format!(
-                            "Broadcast failed: {:?}",
-                            e
+                            "Broadcast failed: {e:?}"
                         )))
                     }
                 },
                 Err(e) => {
                     return Ok(MessageResponse::ServerError(format!(
-                        "Wallet lock failed: {}",
-                        e
+                        "Wallet lock failed: {e}"
                     )))
                 }
             };
             match maker.wallet().write() {
                 Ok(mut wallet) => {
                     if let Err(e) = wallet.sync_and_save() {
-                        return Ok(MessageResponse::ServerError(format!(
-                            "Sync failed: {:?}",
-                            e
-                        )));
+                        return Ok(MessageResponse::ServerError(format!("Sync failed: {e:?}")));
                     }
                 }
                 Err(e) => {
                     return Ok(MessageResponse::ServerError(format!(
-                        "Wallet lock failed: {}",
-                        e
+                        "Wallet lock failed: {e}"
                     )));
                 }
             }
@@ -323,7 +312,7 @@ impl MakerPool {
     /// The maker is NOT started (no coinswap server). Call `start_server` separately.
     pub fn spawn_maker(&mut self, id: MakerId, maker: MakerHandle) -> Result<()> {
         if self.makers.contains_key(&id) {
-            return Err(anyhow!("Maker with id '{}' already exists", id));
+            return Err(anyhow!("Maker with id '{id}' already exists"));
         }
 
         let message_maker = maker.clone_inner();
@@ -353,10 +342,10 @@ impl MakerPool {
         let entry = self
             .makers
             .get_mut(id)
-            .ok_or_else(|| anyhow!("Maker with id '{}' not found", id))?;
+            .ok_or_else(|| anyhow!("Maker with id '{id}' not found"))?;
 
         if entry.server_thread.is_some() {
-            return Err(anyhow!("Maker '{}' server is already running", id));
+            return Err(anyhow!("Maker '{id}' server is already running"));
         }
 
         entry.maker_handle.reset_shutdown();
@@ -366,7 +355,7 @@ impl MakerPool {
                 let maker = maker.clone();
                 let span = tracing::info_span!("maker_server", maker_id = %id, kind = "legacy");
                 thread::Builder::new()
-                    .name(format!("legacy-{}", id))
+                    .name(format!("legacy-{id}"))
                     .spawn(move || {
                         let _guard = span.enter();
                         if let Err(e) = start_maker_server(maker) {
@@ -378,7 +367,7 @@ impl MakerPool {
                 let maker = maker.clone();
                 let span = tracing::info_span!("maker_server", maker_id = %id, kind = "taproot");
                 thread::Builder::new()
-                    .name(format!("taproot-{}", id))
+                    .name(format!("taproot-{id}"))
                     .spawn(move || {
                         let _guard = span.enter();
                         if let Err(e) = start_maker_server_taproot(maker) {
@@ -399,18 +388,18 @@ impl MakerPool {
         let entry = self
             .makers
             .get_mut(id)
-            .ok_or_else(|| anyhow!("Maker with id '{}' not found", id))?;
+            .ok_or_else(|| anyhow!("Maker with id '{id}' not found"))?;
 
         let server_thread = entry
             .server_thread
             .take()
-            .ok_or_else(|| anyhow!("Maker '{}' server is not running", id))?;
+            .ok_or_else(|| anyhow!("Maker '{id}' server is not running"))?;
 
         entry.maker_handle.signal_shutdown();
 
         server_thread
             .join()
-            .map_err(|_| anyhow!("Failed to join server thread for maker '{}'", id))?;
+            .map_err(|_| anyhow!("Failed to join server thread for maker '{id}'"))?;
 
         Ok(())
     }
@@ -428,7 +417,7 @@ impl MakerPool {
         let handle = self
             .makers
             .get(id)
-            .ok_or_else(|| anyhow!("Maker with id '{}' not found", id))?;
+            .ok_or_else(|| anyhow!("Maker with id '{id}' not found"))?;
 
         handle.requester.lock().await.request(req).await
     }

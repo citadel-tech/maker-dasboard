@@ -41,7 +41,7 @@ async fn get_balance(
     if !state.lock().await.has_maker(&id) {
         return (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         );
     }
     match state.lock().await.get_balances(&id).await {
@@ -60,7 +60,7 @@ async fn get_balance(
         }
         Ok(other) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::err(format!("Unexpected response: {}", other))),
+            Json(ApiResponse::err(format!("Unexpected response: {other}"))),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -87,7 +87,7 @@ async fn get_utxos(
     if !state.lock().await.has_maker(&id) {
         return (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         );
     }
     match state.lock().await.get_utxos(&id).await {
@@ -107,7 +107,7 @@ async fn get_utxos(
         }
         Ok(other) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::err(format!("Unexpected response: {}", other))),
+            Json(ApiResponse::err(format!("Unexpected response: {other}"))),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -136,7 +136,7 @@ async fn send_to_address(
     if !state.lock().await.has_maker(&id) {
         return (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         );
     }
     match state
@@ -153,7 +153,7 @@ async fn send_to_address(
         }
         Ok(other) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::err(format!("Unexpected response: {}", other))),
+            Json(ApiResponse::err(format!("Unexpected response: {other}"))),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -180,7 +180,7 @@ async fn get_new_address(
     if !state.lock().await.has_maker(&id) {
         return (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         );
     }
     match state.lock().await.get_new_address(&id).await {
@@ -190,7 +190,7 @@ async fn get_new_address(
         }
         Ok(other) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::err(format!("Unexpected response: {}", other))),
+            Json(ApiResponse::err(format!("Unexpected response: {other}"))),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -217,7 +217,7 @@ async fn sync_wallet(
     if !state.lock().await.has_maker(&id) {
         return (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         );
     }
     match state.lock().await.sync_wallet(&id).await {
@@ -230,7 +230,7 @@ async fn sync_wallet(
         }
         Ok(other) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::err(format!("Unexpected response: {}", other))),
+            Json(ApiResponse::err(format!("Unexpected response: {other}"))),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -257,7 +257,7 @@ async fn get_swap_utxos(
     if !state.lock().await.has_maker(&id) {
         return (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         );
     }
     match state.lock().await.get_swap_utxos(&id).await {
@@ -277,7 +277,7 @@ async fn get_swap_utxos(
         }
         Ok(other) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::err(format!("Unexpected response: {}", other))),
+            Json(ApiResponse::err(format!("Unexpected response: {other}"))),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -304,7 +304,7 @@ async fn get_contract_utxos(
     if !state.lock().await.has_maker(&id) {
         return (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         );
     }
     match state.lock().await.get_contract_utxos(&id).await {
@@ -324,7 +324,7 @@ async fn get_contract_utxos(
         }
         Ok(other) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::err(format!("Unexpected response: {}", other))),
+            Json(ApiResponse::err(format!("Unexpected response: {other}"))),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -351,7 +351,7 @@ async fn get_fidelity_utxos(
     if !state.lock().await.has_maker(&id) {
         return (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::err(format!("Maker '{}' not found", id))),
+            Json(ApiResponse::err(format!("Maker '{id}' not found"))),
         );
     }
     match state.lock().await.get_fidelity_utxos(&id).await {
@@ -371,7 +371,7 @@ async fn get_fidelity_utxos(
         }
         Ok(other) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::err(format!("Unexpected response: {}", other))),
+            Json(ApiResponse::err(format!("Unexpected response: {other}"))),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,

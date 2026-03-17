@@ -444,9 +444,7 @@ export default function Settings({ id, onSaved }: Props) {
         <h3 className="text-lg font-semibold mb-6">Tor Configuration</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label
-              className="block text-sm text-gray-400 mb-2"
-            >
+            <label className="block text-sm text-gray-400 mb-2">
               Tor Auth Password
             </label>
             <div className="relative">
