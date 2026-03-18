@@ -228,3 +228,19 @@ pub struct RpcStatusInfo {
     pub block_height: Option<u64>,
     pub sync_progress: Option<f64>,
 }
+
+/// Request body for `POST /api/bitcoind/start`
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct StartBitcoindRequest {
+    /// Network to run bitcoind on: "regtest" or "signet"
+    pub network: String,
+}
+
+/// Status of the dashboard-managed bitcoind process
+#[derive(Debug, Serialize, ToSchema)]
+pub struct BitcoindStatusInfo {
+    pub running: bool,
+    pub network: Option<String>,
+    /// True only when bitcoind was started by the dashboard (and can be stopped via /stop)
+    pub managed: bool,
+}

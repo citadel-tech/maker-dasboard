@@ -255,6 +255,25 @@ export const monitoring = {
     get(`/makers/${id}/rpc-status`),
 };
 
+// ─── Bitcoind ─────────────────────────────────────────────────────────────────
+
+export interface BitcoindStatusInfo {
+  running: boolean;
+  network?: string;
+  managed: boolean;
+}
+
+export interface StartBitcoindRequest {
+  network: "regtest" | "signet";
+}
+
+export const bitcoind = {
+  status: (): Promise<BitcoindStatusInfo> => get("/bitcoind/status"),
+  start: (body: StartBitcoindRequest): Promise<BitcoindStatusInfo> =>
+    post("/bitcoind/start", body),
+  stop: (): Promise<BitcoindStatusInfo> => post("/bitcoind/stop"),
+};
+
 // ─── Health ───────────────────────────────────────────────────────────────────
 
 export const health = {

@@ -90,6 +90,10 @@ pub struct MakerManager {
     configs: HashMap<MakerId, MakerConfig>,
     /// Handles saving/loading maker state to disk
     persistence: PersistenceManager,
+    /// Running bitcoind child process spawned by the dashboard, if any
+    bitcoind_process: Option<std::process::Child>,
+    /// Network bitcoind was started on (e.g. "regtest", "signet")
+    bitcoind_network: Option<String>,
 }
 
 impl MakerManager {
@@ -103,12 +107,14 @@ impl MakerManager {
             pool: MakerPool::new(),
             configs: HashMap::new(),
             persistence,
+            bitcoind_process: None,
+            bitcoind_network: None,
         };
 
         // Restore previously registered makers (init only, not started)
         for (id, config) in saved_configs {
             tracing::info!("Restoring maker '{}'", id);
-            match mgr.create_maker_internal(id.clone(), config, false) {
+            match mgr.create_maker_internal(id.clone(), config.clone(), false) {
                 Ok(()) => tracing::info!("Maker '{}' restored successfully (stopped)", id),
                 Err(e) => {
                     tracing::warn!(
@@ -116,6 +122,7 @@ impl MakerManager {
                         id,
                         e
                     );
+                    mgr.configs.insert(id, config);
                 }
             }
         }
@@ -244,9 +251,11 @@ impl MakerManager {
             return Err(MakerManagerError::AlreadyRunning(id.clone()));
         }
         if !self.pool.contains(id) {
-            return Err(MakerManagerError::Other(anyhow!(
-                "Maker '{id}' is not registered in the pool (needs re-init)"
-            )));
+            // Pool entry was lost (e.g. init failed at startup because bitcoind was down).
+            // Re-initialize now using the stored config.
+            let config = self.configs.get(id).cloned().expect("checked above");
+            self.create_maker_internal(id.clone(), config, false)
+                .map_err(MakerManagerError::Other)?;
         }
         self.pool.start_server(id).map_err(MakerManagerError::Other)
     }
@@ -468,6 +477,75 @@ impl MakerManager {
             .config_dir
             .join("logs")
             .join(format!("maker-{maker_id}.log"))
+    }
+
+    /// Starts a bitcoind process in the given network mode ("regtest" or "signet").
+    /// Binary path is read from the `BITCOIND_EXE` environment variable; defaults to "bitcoind" on $PATH.
+    pub fn start_bitcoind(&mut self, network: String) -> Result<()> {
+        // Clean up a previously-exited process handle, if any
+        if let Some(ref mut child) = self.bitcoind_process {
+            match child.try_wait() {
+                Ok(Some(_)) => {
+                    self.bitcoind_process = None;
+                    self.bitcoind_network = None;
+                }
+                Ok(None) => return Err(anyhow!("bitcoind is already running")),
+                Err(e) => return Err(anyhow!("Failed to check bitcoind process status: {e}")),
+            }
+        }
+
+        if !matches!(network.as_str(), "regtest" | "signet") {
+            return Err(anyhow!(
+                "Invalid network '{network}'. Must be 'regtest' or 'signet'."
+            ));
+        }
+
+        let exe = std::env::var("BITCOIND_EXE").unwrap_or_else(|_| "bitcoind".to_string());
+        let child = std::process::Command::new(&exe)
+            .arg(format!("-{network}"))
+            .arg("-server")
+            .spawn()
+            .map_err(|e| anyhow!("Failed to spawn bitcoind ('{exe}'): {e}"))?;
+
+        self.bitcoind_process = Some(child);
+        self.bitcoind_network = Some(network);
+        Ok(())
+    }
+
+    /// Extracts the dashboard-managed bitcoind child handle for async-safe shutdown.
+    /// Returns `None` if no process is currently tracked as running.
+    /// The caller is responsible for calling `kill()` and `wait()` on the returned handle.
+    pub fn take_bitcoind(&mut self) -> Option<std::process::Child> {
+        let child = self.bitcoind_process.take()?;
+        self.bitcoind_network = None;
+        Some(child)
+    }
+
+    /// Returns `(running, network)` for the dashboard-managed bitcoind process.
+    pub fn bitcoind_status(&mut self) -> (bool, Option<String>) {
+        if let Some(ref mut child) = self.bitcoind_process {
+            match child.try_wait() {
+                Ok(Some(_)) => {
+                    // Process exited on its own
+                    self.bitcoind_process = None;
+                    self.bitcoind_network = None;
+                    (false, None)
+                }
+                Ok(None) => (true, self.bitcoind_network.clone()),
+                Err(_) => (false, None),
+            }
+        } else {
+            (false, None)
+        }
+    }
+}
+
+impl Drop for MakerManager {
+    fn drop(&mut self) {
+        if let Some(mut child) = self.bitcoind_process.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
     }
 }
 

@@ -1,3 +1,4 @@
+pub mod bitcoind;
 pub mod dto;
 pub mod fidelity;
 pub mod makers;
@@ -46,6 +47,9 @@ pub type AppState = Arc<Mutex<MakerManager>>;
         monitoring::get_tor_address,
         monitoring::get_data_dir,
         monitoring::get_rpc_status,
+        bitcoind::get_status,
+        bitcoind::start,
+        bitcoind::stop,
         health_check,
     ),
     components(schemas(
@@ -60,12 +64,15 @@ pub type AppState = Arc<Mutex<MakerManager>>;
         dto::MakerStatus,
         dto::HealthResponse,
         dto::RpcStatusInfo,
+        dto::StartBitcoindRequest,
+        dto::BitcoindStatusInfo,
     )),
     tags(
         (name = "makers", description = "Maker management"),
         (name = "wallet", description = "Wallet operations"),
         (name = "fidelity", description = "Fidelity bonds"),
         (name = "monitoring", description = "Status and monitoring"),
+        (name = "bitcoind", description = "Bitcoin node management"),
     )
 )]
 pub struct ApiDoc;
@@ -77,6 +84,7 @@ pub fn api_router() -> Router<AppState> {
         .merge(wallet::routes())
         .merge(fidelity::routes())
         .merge(monitoring::routes())
+        .merge(bitcoind::routes())
         .route("/health", get(health_check))
 }
 
