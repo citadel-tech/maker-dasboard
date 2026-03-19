@@ -3,8 +3,11 @@ use std::time::Duration;
 
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
-    response::sse::{Event, KeepAlive, Sse},
+    http::{header, HeaderValue, StatusCode},
+    response::{
+        sse::{Event, KeepAlive, Sse},
+        IntoResponse, Response,
+    },
     routing::get,
     Json, Router,
 };
@@ -25,6 +28,7 @@ pub fn routes() -> Router<AppState> {
         .route("/makers/{id}/swaps", get(get_swaps))
         .route("/makers/{id}/logs", get(get_logs))
         .route("/makers/{id}/logs/stream", get(get_logs_stream))
+        .route("/makers/{id}/logs/download", get(get_logs_download))
         .route("/makers/{id}/tor-address", get(get_tor_address))
         .route("/makers/{id}/data-dir", get(get_data_dir))
         .route("/makers/{id}/rpc-status", get(get_rpc_status))
@@ -135,6 +139,52 @@ async fn get_logs(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiResponse::err(format!("Failed to read logs: {e}"))),
         ),
+    }
+}
+
+/// Download the full log file for a maker.
+async fn get_logs_download(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Response {
+    let manager = state.lock().await;
+    if !manager.has_maker(&id) {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::<()>::err(format!("Maker '{id}' not found"))),
+        )
+            .into_response();
+    }
+    let log_path = manager.log_file_path(&id);
+    drop(manager);
+
+    match tokio::fs::read(&log_path).await {
+        Ok(bytes) => {
+            let disposition = format!("attachment; filename=\"maker-{id}.log\"");
+            let headers = [
+                (
+                    header::CONTENT_TYPE,
+                    HeaderValue::from_static("text/plain; charset=utf-8"),
+                ),
+                (
+                    header::CONTENT_DISPOSITION,
+                    HeaderValue::from_str(&disposition).unwrap_or_else(|_| {
+                        HeaderValue::from_static("attachment")
+                    }),
+                ),
+            ];
+            (StatusCode::OK, headers, bytes).into_response()
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::<()>::err("Log file not found")),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::err(format!("Failed to read log: {e}"))),
+        )
+            .into_response(),
     }
 }
 
