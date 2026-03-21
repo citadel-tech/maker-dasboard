@@ -8,7 +8,7 @@ frontend-install:
 frontend-dev:
 	cd frontend && npm run dev
 
-frontend-build:
+frontend-build: frontend-install
 	cd frontend && npm run build
 
 backend-build:
