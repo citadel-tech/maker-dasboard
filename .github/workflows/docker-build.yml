@@ -1,0 +1,64 @@
+name: Docker Build Test
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "Dockerfile"
+      - "src/**"
+      - "frontend/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "Dockerfile"
+      - "src/**"
+      - "frontend/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+
+jobs:
+  docker-build:
+    name: Build and Test Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: maker-dashboard:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test container starts and responds
+        run: |
+          docker run -d --rm --name test-container -p 3000:3000 \
+            -e DASHBOARD_HOST=0.0.0.0 -e DASHBOARD_ALLOW_REMOTE=true \
+            maker-dashboard:test
+          # Wait for the server to be ready
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/ > /dev/null 2>&1; then
+              echo "Server is up"
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "Server failed to start"
+              docker logs test-container
+              exit 1
+            fi
+            sleep 1
+          done
+          # Verify API responds
+          curl -sf http://localhost:3000/api/makers | jq .
+          docker stop test-container || true
