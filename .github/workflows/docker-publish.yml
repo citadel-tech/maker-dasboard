@@ -2,6 +2,7 @@ name: Publish Docker Image
 
 on:
   push:
+    branches: ["main"]
     tags:
       - "v*"
 
@@ -31,16 +32,18 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract version from tag
+      - name: Determine image tags
         id: meta
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          # Only tag as latest for stable releases (no pre-release identifiers)
-          if echo "$VERSION" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "is_stable=true" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+            echo "tags=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}" >> "$GITHUB_OUTPUT"
+            # Also tag as latest for stable releases (no pre-release identifiers)
+            if echo "$VERSION" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "tags=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> "$GITHUB_OUTPUT"
+            fi
           else
-            echo "is_stable=false" >> "$GITHUB_OUTPUT"
+            echo "tags=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build and push
@@ -49,8 +52,6 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
-            ${{ steps.meta.outputs.is_stable == 'true' && format('{0}/{1}:latest', env.REGISTRY, env.IMAGE_NAME) || '' }}
+          tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
