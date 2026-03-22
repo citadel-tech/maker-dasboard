@@ -1,0 +1,31 @@
+manifestVersion: 1
+id: coinswap-maker
+category: bitcoin
+name: Coinswap Maker Dashboard
+version: "0.1.0"
+tagline: Manage your Coinswap maker node with a web UI
+description: >-
+  Coinswap Maker Dashboard is a web-based management interface for running
+  a Coinswap maker node. Makers are liquidity providers in the Coinswap
+  privacy protocol - they route Bitcoin through their wallets to break
+  transaction history, earning fees in the process.
+
+  The dashboard replaces the command-line maker-cli with an intuitive
+  browser-based UI. You can create and manage multiple maker instances,
+  configure maker settings, manage hot wallets, create fidelity bonds
+  (time-locked Bitcoin deposits that prove commitment), and monitor
+  maker activity. All from your browser!
+releaseNotes: ""
+developer: Citadel Tech
+website: https://github.com/citadel-tech/maker-dashboard
+dependencies:
+  - bitcoin
+repo: https://github.com/citadel-tech/maker-dashboard
+support: https://github.com/citadel-tech/maker-dashboard/issues
+port: 3010
+gallery: []
+path: ""
+defaultUsername: ""
+defaultPassword: ""
+submitter: Citadel Tech
+submission: ""

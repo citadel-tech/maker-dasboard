@@ -1,0 +1,32 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: coinswap-maker_tor_1
+      APP_PORT: 3000
+
+  tor:
+    image: getumbrel/tor:0.4.7.8@sha256:2ace83f22501f58857fa9b403009f595137fa2e7986c4fda79d82a8119072b6a
+    user: "1000:1000"
+    restart: on-failure
+    volumes:
+      - ${APP_DATA_DIR}/data/torrc:/etc/tor/torrc:ro
+      - ${APP_DATA_DIR}/data/tor:/data
+    environment:
+      HOME: "/tmp"
+
+  web:
+    image: coinswap/maker-dashboard:master
+    restart: on-failure
+    stop_grace_period: 1m
+    network_mode: "service:tor"
+    depends_on:
+      - tor
+    volumes:
+      - ${APP_DATA_DIR}/data/config:/root/.config/maker-dashboard
+      - ${APP_DATA_DIR}/data/coinswap:/root/.coinswap
+    environment:
+      DASHBOARD_HOST: 0.0.0.0
+      DASHBOARD_PORT: "3000"
+      DASHBOARD_ALLOW_REMOTE: "true"
