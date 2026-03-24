@@ -50,9 +50,8 @@ export default function Home() {
   const lastSwapRefreshAt = useRef(0);
 
   async function loadMakers(forceSwapRefresh = false) {
-  const isInitialLoad = useRef(true);
+    const isInitialLoad = useRef(true);
 
-  async function loadMakers() {
     const initial = isInitialLoad.current;
     if (!initial) setRefreshing(true);
     try {
@@ -67,7 +66,10 @@ export default function Home() {
         forceSwapRefresh ||
         lastSwapRefreshAt.current === 0 ||
         Date.now() - lastSwapRefreshAt.current >= SWAP_HISTORY_REFRESH_MS;
-      if (initial) setLoadingDetail(`Loading details for ${list.length} maker${list.length !== 1 ? "s" : ""}…`);
+      if (initial)
+        setLoadingDetail(
+          `Loading details for ${list.length} maker${list.length !== 1 ? "s" : ""}…`,
+        );
       const rows = await Promise.all(
         list.map(async ({ id }): Promise<MakerRow> => {
           const requests = [

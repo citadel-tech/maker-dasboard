@@ -63,7 +63,10 @@ const progressPatterns: [string, string][] = [
   ["maker server listening on port", "Maker server started"],
   ["Successfully created fidelity bond", "Fidelity bond confirmed"],
   ["No spendable UTXOs available", "No funds yet — waiting for deposit"],
-  ["Insufficient fund to create fidelity bond", "Insufficient funds for bond — waiting for deposit"],
+  [
+    "Insufficient fund to create fidelity bond",
+    "Insufficient funds for bond — waiting for deposit",
+  ],
   ["Next sync in", "Waiting for next wallet sync cycle…"],
   ["Synced & Saved", "Wallet synced and saved"],
   ["Scanning completed", "Blockchain scan completed"],
@@ -97,13 +100,6 @@ function isInfoLog(line: string): boolean {
 function latestProgressDetail(logs: string[]): string | null {
   for (const line of [...logs].reverse()) {
     for (const [needle, detail] of progressPatterns) {
-      if (line.includes(needle)) return detail;
-    }
-  }
-  return null;
-}
-  for (const line of [...logs].reverse()) {
-    for (const [needle, detail] of patterns) {
       if (line.includes(needle)) return detail;
     }
   }
