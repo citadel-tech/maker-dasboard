@@ -1,10 +1,10 @@
-<center>
+<div align="center">
 
-![Coinswap Maker Dashboard](assets/coinswap-icon.colored.png)
+<img src="assets/coinswap-icon.colored.png" alt="Coinswap Maker Dashboard Logo" width="300" /> 
 
-# Coinswap Maker Dashboard
+<h1 align='center'>Coinswap Maker Dashboard</h1> 
 
-</center>
+</div>
 
 A web dashboard for managing [Coinswap](https://github.com/citadel-tech/coinswap) maker nodes.
 
