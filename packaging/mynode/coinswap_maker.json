@@ -1,0 +1,69 @@
+{
+    "name": "Coinswap Maker Dashboard",
+    "short_name": "coinswap_maker",
+    "author": {
+        "name": "Citadel Tech",
+        "link": "https://github.com/citadel-tech"
+    },
+    "website": {
+        "name": "GitHub",
+        "link": "https://github.com/citadel-tech/maker-dashboard"
+    },
+    "category": "bitcoin_app",
+    "short_description": "Coinswap Maker Node",
+    "description": [
+        "Coinswap Maker Dashboard is a web-based management interface for running a Coinswap maker node.",
+        "Makers are liquidity providers in the Coinswap privacy protocol — they route Bitcoin through their wallets to break transaction history, earning fees in the process.",
+        "The dashboard replaces the command-line maker-cli with an intuitive browser-based UI.",
+        "You can create and manage multiple maker instances, configure maker settings, manage hot wallets, create fidelity bonds (time-locked Bitcoin deposits that prove commitment), and monitor maker activity — all from your browser."
+    ],
+    "latest_version": "master",
+    "supported_archs": null,
+    "download_skip": true,
+    "download_type": "source",
+    "download_source_url": "not_required",
+    "download_binary_url": {
+        "aarch64": "not_required",
+        "x86_64": "not_required"
+    },
+    "install_env_vars": {},
+    "supports_app_page": true,
+    "supports_testnet": false,
+    "http_port": 14200,
+    "https_port": 14201,
+    "requires_bitcoin": true,
+    "requires_docker_image_installation": true,
+    "requires_electrs": false,
+    "requires_lightning": false,
+    "show_on_marketplace_page": true,
+    "show_on_application_page": true,
+    "show_on_homepage": true,
+    "show_on_status_page": true,
+    "hide_status_icon": false,
+    "app_tile_name": "Coinswap Maker",
+    "app_tile_running_status_text": "Running",
+    "app_tile_button_text": "Open",
+    "app_tile_button_href": "/app/coinswap_maker/info",
+    "app_page_show_open_button": true,
+    "app_page_content": [
+        {
+            "heading": "Getting Started",
+            "content": [
+                "Open the dashboard and create a maker instance.",
+                "Configure Bitcoin RPC credentials to connect to your local Bitcoin node.",
+                "Fund the maker wallet and create a fidelity bond to start accepting swaps.",
+                "Your maker will be reachable via Tor at: {APP_TOR_ADDRESS}"
+            ]
+        }
+    ],
+    "can_uninstall": true,
+    "can_reinstall": true,
+    "can_enable_disable": true,
+    "is_beta": true,
+    "is_premium": false,
+    "homepage_section": "apps",
+    "homepage_order": 91,
+    "app_type": "custom",
+    "sdk_version": 2,
+    "data_manageable": true
+}

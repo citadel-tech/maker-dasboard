@@ -1,0 +1,36 @@
+# coinswap_maker service
+# /etc/systemd/system/coinswap_maker.service
+
+[Unit]
+Description=coinswap_maker
+Wants=www.service docker_images.service
+After=www.service docker_images.service
+
+[Service]
+WorkingDirectory=/opt/mynode/coinswap_maker
+
+ExecStartPre=/usr/bin/is_not_shutting_down.sh
+ExecStartPre=/bin/bash -c 'if [ -f /usr/bin/service_scripts/pre_coinswap_maker.sh ]; then /bin/bash /usr/bin/service_scripts/pre_coinswap_maker.sh; fi'
+ExecStart=docker run --rm \
+  --name coinswap_maker \
+  --network host \
+  --volume /mnt/hdd/mynode/coinswap_maker/config:/root/.config/maker-dashboard \
+  --volume /mnt/hdd/mynode/coinswap_maker/coinswap:/root/.coinswap \
+  --env DASHBOARD_HOST=127.0.0.1 \
+  --env DASHBOARD_PORT=14200 \
+  --env DASHBOARD_LOG_FILTER=tower_http=debug,info \
+  --env DASHBOARD_NO_COLOR=true \
+  coinswap/maker-dashboard:master
+ExecStartPost=/bin/bash -c 'if [ -f /usr/bin/service_scripts/post_coinswap_maker.sh ]; then /bin/bash /usr/bin/service_scripts/post_coinswap_maker.sh; fi'
+ExecStop=docker stop -t 60 coinswap_maker
+
+User=bitcoin
+Group=bitcoin
+Type=simple
+TimeoutSec=120
+Restart=always
+RestartSec=60
+SyslogIdentifier=coinswap_maker
+
+[Install]
+WantedBy=multi-user.target
