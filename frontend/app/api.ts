@@ -157,7 +157,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       ...options,
     });
   } catch (err) {
-    clearTimeout(timer);
     if (err instanceof DOMException && err.name === "AbortError") {
       throw new ApiError(
         0,
