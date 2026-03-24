@@ -143,11 +143,28 @@ export class ApiError extends Error {
 
 // ─── Fetch helpers ────────────────────────────────────────────────────────────
 
+const REQUEST_TIMEOUT_MS = 30_000;
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`/api${path}`, {
-    headers: { "Content-Type": "application/json", ...options.headers },
-    ...options,
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, {
+      headers: { "Content-Type": "application/json", ...options.headers },
+      signal: controller.signal,
+      ...options,
+    });
+  } catch (err) {
+    clearTimeout(timer);
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new ApiError(0, `Request timed out after ${REQUEST_TIMEOUT_MS / 1000}s`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 
   let body: ApiResponse<T>;
   try {

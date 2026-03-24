@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Loader2 } from "lucide-react";
 import { wallet, satsToBtc, btcToSats, type UtxoInfo } from "../../api";
 
 interface Props {
@@ -181,10 +182,16 @@ export default function Wallet({ id, onBalanceRefresh }: Props) {
         </div>
 
         {utxosLoading ? (
-          <div className="animate-pulse space-y-2">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-10 bg-gray-800 rounded-lg" />
-            ))}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <Loader2 className="w-4 h-4 text-orange-500 animate-spin" />
+              Fetching UTXOs from wallet…
+            </div>
+            <div className="animate-pulse space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-10 bg-gray-800 rounded-lg" />
+              ))}
+            </div>
           </div>
         ) : utxos && utxos.length > 0 ? (
           <div className="overflow-x-auto">
