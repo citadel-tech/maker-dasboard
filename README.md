@@ -1,4 +1,10 @@
-# Maker Dashboard
+<center>
+
+![Coinswap Maker Dashboard](assets/coinswap-icon.colored.png)
+
+# Coinswap Maker Dashboard
+
+</center>
 
 A web dashboard for managing [Coinswap](https://github.com/citadel-tech/coinswap) maker nodes.
 
@@ -67,6 +73,10 @@ Once the dashboard is running, open it in your browser and create a maker. You w
 - Optionally: a custom `network_port` and `rpc_port` if you are running multiple makers on the same host (defaults are 6102 and 6103 respectively).
 
 After creating a maker, it starts in the **stopped** state. Click **Start** to launch the coinswap server. The maker will attempt to create a fidelity bond on its first run. this requires the maker wallet to have enough funds (at least ~50,000 sats). Use the **Address** tab to get a deposit address and fund the wallet from the [Mutinynet faucet](https://faucet.mutinynet.com/).
+
+## Packaging
+
+Pre-built packages for Umbrel and myNode are in [`packaging/`](packaging/README.md). Docker and bare-metal instructions are there too.
 
 ## Running Tests
 

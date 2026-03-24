@@ -1,91 +1,74 @@
-# Umbrel Packaging
+# Umbrel
 
-Coinswap Maker Dashboard packaged for the [Umbrel app store](https://github.com/getumbrel/umbrel-apps).
-
-## Architecture
-
-The app runs three containers:
-
-- **tor** — Tor proxy providing SOCKS (9050) and control (9051) ports
-- **web** — The maker-dashboard binary, sharing Tor's network via `network_mode: "service:tor"` so the coinswap library can reach Tor at `127.0.0.1`
-- **app_proxy** — Umbrel's auth proxy, routes traffic to the web container through the Tor container's hostname
-
-## Files
-
-| File | Purpose |
-|------|---------|
-| `docker-compose.yml` | Container definitions |
-| `umbrel-app.yml` | App manifest (name, version, description, port) |
-| `exports.sh` | Environment variables shared with other Umbrel apps |
-| `torrc.template` | Tor configuration (SOCKS + control port) |
+For other installation options see [packaging/README.md](../README.md).
 
 ## Prerequisites
 
-- [Umbrel dev environment](https://github.com/getumbrel/umbrel) cloned and running
-- Docker image `coinswap/maker-dashboard:master` published on Docker Hub
+- Umbrel device with SSH access
+- Bitcoin installed and running on your Umbrel
 
-## Testing locally
+## Install
 
-All commands are available through `test-on-umbrel.sh`. Set `UMBREL_DIR` if you already have the umbrel repo cloned, otherwise the script clones it automatically.
-
-```sh
-# Optional: point to an existing umbrel repo clone
-export UMBREL_DIR=/path/to/umbrel
-```
-
-### First time setup
+From your local machine, copy the packaging files to the device:
 
 ```sh
-./test-on-umbrel.sh setup
+scp -r packaging/umbrel/ umbrel@umbrel.local:~/umbrel/app-stores/coinswap/coinswap-maker/
 ```
 
-Clones the umbrel repo (if needed), starts umbrel-dev, and waits until it's ready. Create an account at `http://umbrel-dev.local` on first run.
-
-### Install
+Then SSH in and install:
 
 ```sh
-./test-on-umbrel.sh install
+ssh umbrel@umbrel.local
+umbreld client apps.install.mutate --appId coinswap-maker
 ```
 
-Copies the app files to umbrel-dev and installs. Opens at `http://umbrel-dev.local:3010`.
+Open `http://umbrel.local:3010`.
 
-### Reinstall after changes
+## Update
 
 ```sh
-./test-on-umbrel.sh reinstall
+scp -r packaging/umbrel/ umbrel@umbrel.local:~/umbrel/app-stores/coinswap/coinswap-maker/
+ssh umbrel@umbrel.local
+umbreld client apps.uninstall.mutate --appId coinswap-maker
+umbreld client apps.install.mutate --appId coinswap-maker
 ```
 
-Uninstalls the previous version, copies updated files, and installs again.
-
-### Debugging
+## Uninstall
 
 ```sh
-./test-on-umbrel.sh status       # container status and app state
-./test-on-umbrel.sh logs         # all container logs
-./test-on-umbrel.sh logs-web     # dashboard logs only
-./test-on-umbrel.sh logs-tor     # tor logs only
-./test-on-umbrel.sh logs-proxy   # app_proxy logs only
-./test-on-umbrel.sh shell        # shell inside umbrel-dev
+umbreld client apps.uninstall.mutate --appId coinswap-maker
 ```
 
-### Uninstall
+## Debug
 
 ```sh
-./test-on-umbrel.sh uninstall
+docker logs coinswap-maker_web_1
+docker logs coinswap-maker_tor_1
+docker logs coinswap-maker_app_proxy_1
+umbreld client apps.state.query --appId coinswap-maker
 ```
-
-## Verify persistence
-
-1. Create a maker through the dashboard UI
-2. Restart the app (right-click icon > Restart on the Umbrel homescreen)
-3. Confirm the maker config is still there
-
-Data is stored in two volumes:
-- `/root/.config/maker-dashboard` — dashboard config (`makers.json`)
-- `/root/.coinswap` — coinswap wallet and data directories
 
 ## Tor
 
-The coinswap library hardcodes Tor connections to `127.0.0.1`. To work around this in Docker (where Tor runs in a separate container), the web container uses `network_mode: "service:tor"` to share the Tor container's network namespace. Both containers see the same `127.0.0.1`.
+Umbrel runs each container in its own network namespace, so `127.0.0.1` inside one container does not reach another. The web container uses `network_mode: "service:tor"` to share the Tor container's network stack. Both containers see the same `127.0.0.1:9050`.
 
-The Tor control password is `moneyprintergobrrr` (standard across Umbrel apps). Pass this as `tor_auth` when creating a maker.
+Set `tor_auth` to `moneyprintergobrrr` when creating a maker in the dashboard.
+
+## Testing locally with umbrel-dev
+
+Use `test-on-umbrel.sh` to test against a local umbrel-dev environment:
+
+```sh
+./test-on-umbrel.sh setup      # clone umbrel repo and start umbrel-dev
+./test-on-umbrel.sh install    # copy files and install
+./test-on-umbrel.sh reinstall  # redeploy after changes
+./test-on-umbrel.sh logs       # all container logs
+./test-on-umbrel.sh status     # container status and app state
+./test-on-umbrel.sh uninstall
+```
+
+Set `UMBREL_DIR` to skip the clone step:
+
+```sh
+export UMBREL_DIR=/path/to/umbrel
+```
