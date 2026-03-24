@@ -59,6 +59,10 @@ export default function Home() {
       setError(null);
       if (initial) setLoadingDetail("Fetching maker list…");
       const list = await makers.list();
+      if (initial)
+        setLoadingDetail(
+          `Loading details for ${list.length} maker${list.length !== 1 ? "s" : ""}…`,
+        );
       const includeSwaps =
         forceSwapRefresh ||
         lastSwapRefreshAt.current === 0 ||

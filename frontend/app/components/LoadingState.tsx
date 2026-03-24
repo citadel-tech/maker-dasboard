@@ -28,7 +28,5 @@ export default function LoadingState({
 
   if (inline) return content;
 
-  return (
-    <div className="flex items-center justify-center h-64">{content}</div>
-  );
+  return <div className="flex items-center justify-center h-64">{content}</div>;
 }

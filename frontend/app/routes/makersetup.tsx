@@ -77,7 +77,10 @@ function latestProgressDetail(logs: string[]): string | null {
     ["maker server listening on port", "Maker server started"],
     ["Successfully created fidelity bond", "Fidelity bond confirmed"],
     ["No spendable UTXOs available", "No funds yet — waiting for deposit"],
-    ["Insufficient fund to create fidelity bond", "Insufficient funds for bond — waiting for deposit"],
+    [
+      "Insufficient fund to create fidelity bond",
+      "Insufficient funds for bond — waiting for deposit",
+    ],
     ["Next sync in", "Waiting for next wallet sync cycle…"],
     ["Synced & Saved", "Wallet synced and saved"],
     ["Scanning completed", "Blockchain scan completed"],
@@ -86,7 +89,10 @@ function latestProgressDetail(logs: string[]): string | null {
     ["Sync at:----setup_fidelity_bond----", "Setting up fidelity bond…"],
     ["Fidelity timelock", "Configuring fidelity bond timelock…"],
     ["Fidelity value chosen", "Fidelity bond amount selected"],
-    ["No active Fidelity Bonds found", "No fidelity bonds found — creating one"],
+    [
+      "No active Fidelity Bonds found",
+      "No fidelity bonds found — creating one",
+    ],
     ["Generated new Tor Hidden Service", "Generated new Tor hidden service"],
     ["Generated existing Tor Hidden Service", "Tor hidden service restored"],
     ["Starting Maker Server", "Starting maker server…"],
@@ -277,7 +283,8 @@ export default function MakerSetup() {
         </div>
       ),
       title: "Starting Maker",
-      subtitle: progressDetail ?? "Initializing wallet and connecting to Bitcoin Core…",
+      subtitle:
+        progressDetail ?? "Initializing wallet and connecting to Bitcoin Core…",
       color: "orange",
     },
     awaiting_funds: {
@@ -287,7 +294,9 @@ export default function MakerSetup() {
         </div>
       ),
       title: "Deposit Required",
-      subtitle: progressDetail ?? "Send Bitcoin to this address to create your fidelity bond",
+      subtitle:
+        progressDetail ??
+        "Send Bitcoin to this address to create your fidelity bond",
       color: "orange",
     },
     creating_bond: {
@@ -315,7 +324,9 @@ export default function MakerSetup() {
         </div>
       ),
       title: "Creating Fidelity Bond",
-      subtitle: progressDetail ?? "Funds detected — waiting for confirmation and bond creation…",
+      subtitle:
+        progressDetail ??
+        "Funds detected — waiting for confirmation and bond creation…",
       color: "blue",
     },
     live: {
@@ -569,7 +580,8 @@ export default function MakerSetup() {
                     d="M4 12a8 8 0 018-8v8z"
                   />
                 </svg>
-                {progressDetail ?? "Watching for incoming funds — this page will update automatically"}
+                {progressDetail ??
+                  "Watching for incoming funds — this page will update automatically"}
               </div>
             </div>
           )}

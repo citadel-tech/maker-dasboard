@@ -159,7 +159,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   } catch (err) {
     clearTimeout(timer);
     if (err instanceof DOMException && err.name === "AbortError") {
-      throw new ApiError(0, `Request timed out after ${REQUEST_TIMEOUT_MS / 1000}s`);
+      throw new ApiError(
+        0,
+        `Request timed out after ${REQUEST_TIMEOUT_MS / 1000}s`,
+      );
     }
     throw err;
   } finally {
