@@ -302,6 +302,42 @@ pub struct RpcStatusInfo {
     pub sync_progress: Option<f64>,
 }
 
+#[derive(Debug, Serialize, Deserialize, ToSchema, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+pub enum StartupCheckKind {
+    Bitcoin,
+    Rpc,
+    Rest,
+    Zmq,
+    Tor,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct StartupCheckRequest {
+    pub check: StartupCheckKind,
+    #[schema(example = "127.0.0.1:38332")]
+    pub rpc: Option<String>,
+    #[schema(example = "user")]
+    pub rpc_user: Option<String>,
+    #[schema(example = "password")]
+    pub rpc_password: Option<String>,
+    #[schema(example = "tcp://127.0.0.1:28332")]
+    pub zmq: Option<String>,
+    #[schema(example = 9050)]
+    pub socks_port: Option<u16>,
+    #[schema(example = 9051)]
+    pub control_port: Option<u16>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct StartupCheckResponse {
+    pub check: StartupCheckKind,
+    pub success: bool,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+}
+
 /// Request body for `POST /api/bitcoind/start`
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct StartBitcoindRequest {

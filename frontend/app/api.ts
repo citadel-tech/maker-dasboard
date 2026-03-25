@@ -71,6 +71,25 @@ export interface RpcStatusInfo {
   sync_progress?: number;
 }
 
+export type StartupCheckKind = "bitcoin" | "rpc" | "rest" | "zmq" | "tor";
+
+export interface StartupCheckRequest {
+  check: StartupCheckKind;
+  rpc?: string;
+  rpc_user?: string;
+  rpc_password?: string;
+  zmq?: string;
+  socks_port?: number;
+  control_port?: number;
+}
+
+export interface StartupCheckResponse {
+  check: StartupCheckKind;
+  success: boolean;
+  message: string;
+  detail?: string;
+}
+
 export interface SwapHistoryDto {
   /** In-progress incoming swap coins */
   active: UtxoInfo[];
@@ -336,6 +355,11 @@ export const bitcoind = {
 
 export const health = {
   check: (): Promise<HealthResponse> => get("/health"),
+};
+
+export const onboarding = {
+  startupCheck: (body: StartupCheckRequest): Promise<StartupCheckResponse> =>
+    post("/onboarding/startup-check", body),
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
