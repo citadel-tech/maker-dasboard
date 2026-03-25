@@ -451,6 +451,7 @@ function CreateStep({
   const navigate = useNavigate();
   const [form, setForm] = useState({
     id: "",
+
     rpc: config.rpc,
     rpcUser: config.rpcUser,
     rpcPass: config.rpcPass,
