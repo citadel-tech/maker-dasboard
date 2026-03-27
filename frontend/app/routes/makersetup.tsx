@@ -65,6 +65,31 @@ function fundsDetected(logs: string[]): boolean {
       l.includes("Coinselection"),
   );
 }
+/** Pattern → human-readable progress mappings */
+const progressPatterns: [string, string][] = [
+  ["maker server listening on port", "Maker server started"],
+  ["Successfully created fidelity bond", "Fidelity bond confirmed"],
+  ["No spendable UTXOs available", "No funds yet — waiting for deposit"],
+  [
+    "Insufficient fund to create fidelity bond",
+    "Insufficient funds for bond — waiting for deposit",
+  ],
+  ["Next sync in", "Waiting for next wallet sync cycle…"],
+  ["Synced & Saved", "Wallet synced and saved"],
+  ["Scanning completed", "Blockchain scan completed"],
+  ["Re-scanning Blockchain", "Re-scanning blockchain…"],
+  ["Sync Started for", "Syncing wallet with Bitcoin Core…"],
+  ["Sync at:----setup_fidelity_bond----", "Setting up fidelity bond…"],
+  ["Fidelity timelock", "Configuring fidelity bond timelock…"],
+  ["Fidelity value chosen", "Fidelity bond amount selected"],
+  ["No active Fidelity Bonds found", "No fidelity bonds found — creating one"],
+  ["Generated new Tor Hidden Service", "Generated new Tor hidden service"],
+  ["Generated existing Tor Hidden Service", "Tor hidden service restored"],
+  ["Starting Maker Server", "Starting maker server…"],
+  ["Selected 1 regular UTXOs", "Funds found — selecting UTXOs for bond"],
+  ["Coinselection", "Selecting coins for bond transaction…"],
+  ["Transaction seen in mempool", "Incoming transaction detected"],
+];
 
 const LOG_LEVEL_RE = /(?:^|\s|\[)(INFO|WARN|ERROR|DEBUG|TRACE)(?=$|\s|:|\])/i;
 
@@ -76,6 +101,16 @@ function isInfoLog(line: string): boolean {
   if (!levelMatch) return true;
 
   return levelMatch[1].toUpperCase() === "INFO";
+}
+
+/** Extract the latest meaningful progress detail from logs for user display */
+function latestProgressDetail(logs: string[]): string | null {
+  for (const line of [...logs].reverse()) {
+    for (const [needle, detail] of progressPatterns) {
+      if (line.includes(needle)) return detail;
+    }
+  }
+  return null;
 }
 
 function inferStage(
@@ -104,6 +139,7 @@ export default function MakerSetup() {
   const [minAmount, setMinAmount] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [progressDetail, setProgressDetail] = useState<string | null>(null);
 
   const logsEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -320,7 +356,8 @@ export default function MakerSetup() {
         </div>
       ),
       title: "Starting Maker",
-      subtitle: "Initializing wallet and connecting to Bitcoin Core…",
+      subtitle:
+        progressDetail ?? "Initializing wallet and connecting to Bitcoin Core…",
       color: "orange",
     },
     awaiting_funds: {
@@ -330,7 +367,9 @@ export default function MakerSetup() {
         </div>
       ),
       title: "Deposit Required",
-      subtitle: "Send Bitcoin to this address to create your fidelity bond",
+      subtitle:
+        progressDetail ??
+        "Send Bitcoin to this address to create your fidelity bond",
       color: "orange",
     },
     creating_bond: {
@@ -358,7 +397,9 @@ export default function MakerSetup() {
         </div>
       ),
       title: "Creating Fidelity Bond",
-      subtitle: "Funds detected — waiting for confirmation and bond creation…",
+      subtitle:
+        progressDetail ??
+        "Funds detected — waiting for confirmation and bond creation…",
       color: "blue",
     },
     live: {
@@ -612,8 +653,8 @@ export default function MakerSetup() {
                     d="M4 12a8 8 0 018-8v8z"
                   />
                 </svg>
-                Watching for incoming funds — this page will update
-                automatically
+                {progressDetail ??
+                  "Watching for incoming funds — this page will update automatically"}
               </div>
             </div>
           )}
@@ -659,7 +700,7 @@ export default function MakerSetup() {
                     d="M4 12a8 8 0 018-8v8z"
                   />
                 </svg>
-                Waiting for block confirmation…
+                {progressDetail ?? "Waiting for block confirmation…"}
               </div>
             </div>
           )}

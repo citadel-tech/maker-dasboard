@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { X } from "lucide-react";
 import Nav from "../components/Nav";
+import LoadingState from "../components/LoadingState";
 import OnboardingWizard from "./onboarding";
 import {
   makers,
@@ -44,6 +45,8 @@ function swapKey(
 export default function Home() {
   const [makerRows, setMakerRows] = useState<MakerRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<Set<string>>(new Set());
   const swapHistoryCache = useRef<Record<string, UtxoInfo[]>>({});
@@ -51,13 +54,26 @@ export default function Home() {
   const lastSwapRefreshAt = useRef(0);
 
   async function loadMakers(forceSwapRefresh = false) {
+    const isInitialLoad = useRef(true);
+
+    const initial = isInitialLoad.current;
+    if (!initial) setRefreshing(true);
     try {
       setError(null);
+      if (initial) setLoadingDetail("Fetching maker list…");
       const list = await makers.list();
+      if (initial)
+        setLoadingDetail(
+          `Loading details for ${list.length} maker${list.length !== 1 ? "s" : ""}…`,
+        );
       const includeSwaps =
         forceSwapRefresh ||
         lastSwapRefreshAt.current === 0 ||
         Date.now() - lastSwapRefreshAt.current >= SWAP_HISTORY_REFRESH_MS;
+      if (initial)
+        setLoadingDetail(
+          `Loading details for ${list.length} maker${list.length !== 1 ? "s" : ""}…`,
+        );
       const rows = await Promise.all(
         list.map(async ({ id }): Promise<MakerRow> => {
           const requests = [
@@ -120,6 +136,8 @@ export default function Home() {
       setError(err instanceof Error ? err.message : "Failed to load makers");
     } finally {
       setLoading(false);
+      setRefreshing(false);
+      isInitialLoad.current = false;
     }
   }
 
@@ -152,9 +170,10 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-gray-950 text-gray-100">
         <Nav />
-        <div className="flex items-center justify-center h-64">
-          <div className="text-gray-400 animate-pulse">Loading makers…</div>
-        </div>
+        <LoadingState
+          message="Loading makers"
+          detail={loadingDetail || "Connecting to dashboard…"}
+        />
       </div>
     );
   }
@@ -253,12 +272,20 @@ export default function Home() {
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-5 gap-3">
             <h2 className="text-lg sm:text-xl font-semibold">Your Makers</h2>
-            <Link
-              to="/addMaker"
-              className="px-4 sm:px-5 py-2 sm:py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 active:scale-[0.97] transition-all duration-150 font-semibold text-sm w-full sm:w-auto text-center"
-            >
-              + Add New Maker
-            </Link>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              {refreshing && (
+                <span className="text-xs text-gray-500 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                  Refreshing...
+                </span>
+              )}
+              <Link
+                to="/addMaker"
+                className="px-4 sm:px-5 py-2 sm:py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 active:scale-[0.97] transition-all duration-150 font-semibold text-sm w-full sm:w-auto text-center"
+              >
+                + Add New Maker
+              </Link>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">

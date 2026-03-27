@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { Zap, Moon } from "lucide-react";
 import Nav from "../../components/Nav";
+import LoadingState from "../../components/LoadingState";
 import {
   makers,
   wallet,
@@ -41,17 +42,21 @@ export default function MakerDetails() {
   const [torAddress, setTorAddress] = useState<string | null>(null);
   const [dataDir, setDataDir] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingDetail, setLoadingDetail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const isInitialLoad = useRef(true);
   const [walletRefreshToken, setWalletRefreshToken] = useState(0);
 
   const loadCore = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
+    const initial = isInitialLoad.current;
+    if (initial) setLoading(true);
     setError(null);
     try {
+      if (initial) setLoadingDetail("Fetching maker config and status…");
       const [infoData, statusData, balanceData, reportsData] =
         await Promise.allSettled([
           makers.get(id),
@@ -75,6 +80,7 @@ export default function MakerDetails() {
         setEarningsSats(0);
       }
 
+      if (initial) setLoadingDetail("Resolving Tor address…");
       monitoring
         .torAddress(id)
         .then(setTorAddress)
@@ -87,6 +93,7 @@ export default function MakerDetails() {
       setError(e instanceof Error ? e.message : "Failed to load maker data");
     } finally {
       setLoading(false);
+      isInitialLoad.current = false;
     }
   }, [id]);
 
@@ -137,6 +144,19 @@ export default function MakerDetails() {
   };
 
   const swapLiquidity = balances ? `${satsToBtc(balances.swap)} BTC` : "—";
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-gray-100">
+        <Nav />
+        <LoadingState
+          message={`Loading maker ${id}`}
+          detail={loadingDetail || "Connecting…"}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
       <Nav />
@@ -229,7 +249,7 @@ export default function MakerDetails() {
               <div>
                 <div className="text-sm text-orange-100 mb-1">Status</div>
                 <div className="text-xl sm:text-2xl font-bold text-white">
-                  {loading ? "Loading…" : isRunning ? "Running" : "Stopped"}
+                  {isRunning ? "Running" : "Stopped"}
                 </div>
               </div>
             </div>
