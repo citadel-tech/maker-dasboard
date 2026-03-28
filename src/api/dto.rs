@@ -170,6 +170,12 @@ pub struct MakerInfo {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
+pub struct SuggestedMakerPorts {
+    pub network_port: u16,
+    pub rpc_port: u16,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum MakerStateDto {
     Running,

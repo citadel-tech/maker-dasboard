@@ -1,8 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { X } from "lucide-react";
+import { Check, LoaderCircle, X } from "lucide-react";
 import Nav from "../components/Nav";
-import { makers, type CreateMakerRequest, ApiError } from "../api";
+import {
+  makers,
+  onboarding,
+  type CreateMakerRequest,
+  type StartupCheckKind,
+  ApiError,
+} from "../api";
+
+type CheckState = {
+  status: "idle" | "loading" | "success" | "error";
+  message?: string;
+  detail?: string;
+};
 
 export default function AddMaker() {
   const navigate = useNavigate();
@@ -20,30 +32,145 @@ export default function AddMaker() {
     torAuth: "",
     socksPort: "9050",
     controlPort: "9051",
-    networkPort: "6102",
-    makerRpcPort: "6103",
+    networkPort: "",
+    makerRpcPort: "",
     requiredConfirms: "1",
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [loadingPorts, setLoadingPorts] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [checks, setChecks] = useState<
+    Record<"bitcoin" | "rpc" | "rest" | "zmq" | "tor", CheckState>
+  >({
+    bitcoin: { status: "idle" },
+    rpc: { status: "idle" },
+    rest: { status: "idle" },
+    zmq: { status: "idle" },
+    tor: { status: "idle" },
+  });
   const [showPassword, setShowPassword] = useState({
     password: false,
     bitcoinPassword: false,
     torAuth: false,
   });
 
+  useEffect(() => {
+    let cancelled = false;
+
+    makers
+      .suggestedPorts()
+      .then((ports) => {
+        if (cancelled) return;
+        setFormData((prev) => ({
+          ...prev,
+          networkPort: String(ports.network_port),
+          makerRpcPort: String(ports.rpc_port),
+        }));
+      })
+      .catch((err: Error) => {
+        if (cancelled) return;
+        setError(err.message || "Failed to load maker ports");
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoadingPorts(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
+
+    if (
+      ["bitcoinRpc", "bitcoinUser", "bitcoinPassword", "zmq"].includes(name)
+    ) {
+      setChecks((prev) => ({
+        ...prev,
+        bitcoin: { status: "idle" },
+        rpc: { status: "idle" },
+        rest: { status: "idle" },
+        zmq: { status: "idle" },
+      }));
+    }
+    if (["socksPort", "controlPort"].includes(name)) {
+      setChecks((prev) => ({
+        ...prev,
+        tor: { status: "idle" },
+      }));
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
   };
 
+  async function runCheck(check: "bitcoin" | "rpc" | "rest" | "zmq" | "tor") {
+    setChecks((prev) => ({
+      ...prev,
+      [check]: { status: "loading", message: "Running check..." },
+    }));
+
+    try {
+      const result = await onboarding.startupCheck({
+        check: check as StartupCheckKind,
+        rpc: formData.bitcoinRpc,
+        rpc_user: formData.bitcoinUser,
+        rpc_password: formData.bitcoinPassword,
+        zmq: formData.zmq,
+        socks_port: formData.socksPort
+          ? parseInt(formData.socksPort, 10)
+          : undefined,
+        control_port: formData.controlPort
+          ? parseInt(formData.controlPort, 10)
+          : undefined,
+      });
+
+      setChecks((prev) => ({
+        ...prev,
+        [check]: {
+          status: result.success ? "success" : "error",
+          message: result.message,
+          detail: result.detail,
+        },
+      }));
+    } catch (err) {
+      setChecks((prev) => ({
+        ...prev,
+        [check]: {
+          status: "error",
+          message: err instanceof Error ? err.message : "Check failed",
+        },
+      }));
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (
+      checks.bitcoin.status !== "success" ||
+      checks.rpc.status !== "success" ||
+      checks.rest.status !== "success" ||
+      checks.zmq.status !== "success" ||
+      checks.tor.status !== "success"
+    ) {
+      setError("Run and pass all pre-checks before adding a maker.");
+      return;
+    }
+
+    if (!formData.networkPort || !formData.makerRpcPort) {
+      setError(
+        "Waiting for maker ports to be assigned. Try again in a moment.",
+      );
+      return;
+    }
+
     setSubmitting(true);
 
     const body: CreateMakerRequest = {
@@ -91,6 +218,39 @@ export default function AddMaker() {
       setSubmitting(false);
     }
   };
+
+  const prereqs = [
+    {
+      id: "bitcoin" as const,
+      title: "Bitcoin Core is running and fully synced",
+      desc: "The maker needs a fully synced Bitcoin node to operate. Testnet, regtest, or signet work for testing.",
+      code: "bitcoin-cli getblockchaininfo",
+    },
+    {
+      id: "rpc" as const,
+      title: "Bitcoin Core RPC is enabled",
+      desc: "Add rpcuser and rpcpassword to your bitcoin.conf and restart Bitcoin Core.",
+      code: "rpcuser=youruser\nrpcpassword=yourpassword\nserver=1",
+    },
+    {
+      id: "rest" as const,
+      title: "Bitcoin Core REST is enabled",
+      desc: "The dashboard checks `/rest/chaininfo.json` on your Bitcoin Core port, so `rest=1` should be enabled in bitcoin.conf.",
+      code: "rest=1",
+    },
+    {
+      id: "zmq" as const,
+      title: "ZMQ notifications are configured",
+      desc: "ZMQ allows the maker to receive real-time block and transaction updates.",
+      code: "zmqpubrawblock=tcp://127.0.0.1:28332\nzmqpubrawtx=tcp://127.0.0.1:28332",
+    },
+    {
+      id: "tor" as const,
+      title: "Tor is running",
+      desc: "Tor is required — it's how takers discover your maker, how fidelity bonds are tied to your address, and how all swap requests are routed. Without Tor, your maker cannot participate in the network.",
+      code: "tor --version",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
@@ -486,12 +646,17 @@ export default function AddMaker() {
                   type="number"
                   name="networkPort"
                   value={formData.networkPort}
-                  onChange={handleChange}
-                  placeholder="6102"
-                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none focus:shadow-[0_0_0_3px_rgba(249,115,22,0.15)] transition-shadow duration-200 text-gray-100 placeholder-gray-500 font-mono text-sm"
+                  readOnly
+                  aria-readonly="true"
+                  placeholder={
+                    loadingPorts ? "Loading..." : "Assigned automatically"
+                  }
+                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 font-mono text-sm cursor-not-allowed"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  For client connections
+                  {loadingPorts
+                    ? "Finding an available port"
+                    : "Assigned automatically for client connections"}
                 </p>
               </div>
               <div>
@@ -502,12 +667,17 @@ export default function AddMaker() {
                   type="number"
                   name="makerRpcPort"
                   value={formData.makerRpcPort}
-                  onChange={handleChange}
-                  placeholder="6103"
-                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:border-orange-500 focus:outline-none focus:shadow-[0_0_0_3px_rgba(249,115,22,0.15)] transition-shadow duration-200 text-gray-100 placeholder-gray-500 font-mono text-sm"
+                  readOnly
+                  aria-readonly="true"
+                  placeholder={
+                    loadingPorts ? "Loading..." : "Assigned automatically"
+                  }
+                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 font-mono text-sm cursor-not-allowed"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  For maker-cli operations
+                  {loadingPorts
+                    ? "Finding an available port"
+                    : "Assigned automatically for maker-cli operations"}
                 </p>
               </div>
               <div>
@@ -530,6 +700,102 @@ export default function AddMaker() {
             </div>
           </div>
 
+          {/* Prerequisite Checks */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
+            <h3 className="text-lg font-semibold mb-2">Pre-checks</h3>
+            <p className="text-sm text-gray-400 mb-6">
+              Click each item to run a live check against your current Bitcoin
+              Core and Tor settings.
+            </p>
+
+            <div className="space-y-4">
+              {prereqs.map((prereq) => {
+                const state = checks[prereq.id];
+                const isLoading = state.status === "loading";
+                const isSuccess = state.status === "success";
+                const isError = state.status === "error";
+
+                return (
+                  <button
+                    key={prereq.id}
+                    type="button"
+                    onClick={() => void runCheck(prereq.id)}
+                    disabled={isLoading}
+                    className={`w-full rounded-xl border p-4 text-left transition-all ${
+                      isSuccess
+                        ? "border-emerald-500/70 bg-emerald-950/20"
+                        : isError
+                          ? "border-red-700/70 bg-red-950/20"
+                          : "border-gray-700 bg-gray-900 hover:border-gray-600"
+                    } ${isLoading ? "cursor-wait" : "cursor-pointer"}`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div
+                        className={`mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                          isSuccess
+                            ? "border-emerald-500 bg-emerald-500"
+                            : isError
+                              ? "border-red-500 bg-red-500/20"
+                              : isLoading
+                                ? "border-orange-400 text-orange-400"
+                                : "border-gray-600"
+                        }`}
+                      >
+                        {isLoading ? (
+                          <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
+                        ) : isSuccess ? (
+                          <Check className="w-3.5 h-3.5 text-white" />
+                        ) : isError ? (
+                          <X className="w-3.5 h-3.5 text-red-400" />
+                        ) : null}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
+                          <div className="font-semibold text-gray-100">
+                            {prereq.title}
+                          </div>
+                          <span className="text-xs font-medium text-gray-500">
+                            {isLoading
+                              ? "Checking..."
+                              : isSuccess
+                                ? "Passed"
+                                : isError
+                                  ? "Failed"
+                                  : "Click to test"}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-400 mb-2">
+                          {prereq.desc}
+                        </p>
+                        <div className="bg-black rounded-lg px-3 py-2 font-mono text-xs text-gray-300 whitespace-pre">
+                          {prereq.code}
+                        </div>
+                        {state.message && (
+                          <p
+                            className={`mt-3 text-sm ${
+                              isSuccess
+                                ? "text-emerald-300"
+                                : isError
+                                  ? "text-red-300"
+                                  : "text-gray-400"
+                            }`}
+                          >
+                            {state.message}
+                          </p>
+                        )}
+                        {state.detail && (
+                          <p className="mt-1 text-xs text-gray-500 break-words">
+                            {state.detail}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-3">
             <button
@@ -541,10 +807,22 @@ export default function AddMaker() {
             </button>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={
+                submitting ||
+                loadingPorts ||
+                checks.bitcoin.status !== "success" ||
+                checks.rpc.status !== "success" ||
+                checks.rest.status !== "success" ||
+                checks.zmq.status !== "success" ||
+                checks.tor.status !== "success"
+              }
               className="flex-1 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 active:scale-[0.98] transition-all duration-150 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? "Adding…" : "Add Maker"}
+              {submitting
+                ? "Adding…"
+                : loadingPorts
+                  ? "Assigning Ports…"
+                  : "Add Maker"}
             </button>
           </div>
         </form>

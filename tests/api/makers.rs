@@ -1,5 +1,7 @@
 //! Tests for maker management endpoints.
 
+use std::net::TcpListener;
+
 use axum::http::StatusCode;
 use serde_json::json;
 
@@ -19,6 +21,50 @@ async fn maker_count_is_zero_initially() {
     let (status, body) = get(test_app(), "/makers/count").await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body, json!({ "success": true, "data": 0 }));
+}
+
+#[tokio::test]
+async fn suggested_ports_return_defaults_when_available() {
+    let (status, body) = get(test_app(), "/makers/ports/suggested").await;
+    assert_eq!(status, StatusCode::OK);
+    let network_port = body["data"]["network_port"].as_u64().unwrap();
+    let rpc_port = body["data"]["rpc_port"].as_u64().unwrap();
+    assert!(network_port > 0);
+    assert!(rpc_port > 0);
+    assert_ne!(network_port, rpc_port);
+}
+
+#[tokio::test]
+async fn suggested_ports_skip_taken_defaults() {
+    let app = test_app();
+
+    let (first_status, first_body) = get(app.clone(), "/makers/ports/suggested").await;
+    assert_eq!(first_status, StatusCode::OK);
+
+    let first_network_port = first_body["data"]["network_port"].as_u64().unwrap();
+    let first_rpc_port = first_body["data"]["rpc_port"].as_u64().unwrap();
+
+    let network_listener = TcpListener::bind(format!("127.0.0.1:{first_network_port}")).unwrap();
+    let rpc_listener = TcpListener::bind(format!("127.0.0.1:{first_rpc_port}")).unwrap();
+
+    let (second_status, second_body) = get(app, "/makers/ports/suggested").await;
+
+    drop(network_listener);
+    drop(rpc_listener);
+
+    assert_eq!(second_status, StatusCode::OK);
+    assert_ne!(
+        second_body["data"]["network_port"].as_u64().unwrap(),
+        first_network_port
+    );
+    assert_ne!(
+        second_body["data"]["rpc_port"].as_u64().unwrap(),
+        first_rpc_port
+    );
+    assert_ne!(
+        second_body["data"]["network_port"].as_u64().unwrap(),
+        second_body["data"]["rpc_port"].as_u64().unwrap()
+    );
 }
 
 #[tokio::test]
@@ -84,6 +130,56 @@ async fn create_with_credentials_returns_500_without_bitcoin() {
     assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
     assert!(!body["success"].as_bool().unwrap());
     assert!(body["error"].is_string());
+}
+
+#[tokio::test]
+async fn create_skips_taken_local_network_port() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    let (status, body) = post(
+        test_app(),
+        "/makers",
+        json!({
+            "id": "test",
+            "rpc_user": "alice",
+            "rpc_password": "pass",
+            "network_port": port,
+        }),
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert!(!body["success"].as_bool().unwrap());
+    assert_ne!(
+        body["error"],
+        format!("network_port {port} is already in use on this machine")
+    );
+}
+
+#[tokio::test]
+async fn create_skips_taken_local_rpc_port() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    let (status, body) = post(
+        test_app(),
+        "/makers",
+        json!({
+            "id": "test",
+            "rpc_user": "alice",
+            "rpc_password": "pass",
+            "rpc_port": port,
+        }),
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert!(!body["success"].as_bool().unwrap());
+    assert_ne!(
+        body["error"],
+        format!("rpc_port {port} is already in use on this machine")
+    );
 }
 
 // 404 for unknown maker

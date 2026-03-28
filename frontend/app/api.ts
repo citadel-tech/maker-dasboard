@@ -37,6 +37,11 @@ export interface MakerInfoDetailed {
   nostr_relays: string[];
 }
 
+export interface SuggestedMakerPorts {
+  network_port: number;
+  rpc_port: number;
+}
+
 export interface BalanceInfo {
   /** satoshis */
   regular: number;
@@ -296,6 +301,8 @@ export function downloadLogs(id: string): void {
 export const makers = {
   list: (): Promise<MakerInfo[]> => get("/makers"),
   count: (): Promise<number> => get("/makers/count"),
+  suggestedPorts: (): Promise<SuggestedMakerPorts> =>
+    get("/makers/ports/suggested"),
   get: (id: string): Promise<MakerInfoDetailed> => get(`/makers/${id}`),
   info: (id: string): Promise<MakerInfoDetailed> => get(`/makers/${id}/info`),
   create: (body: CreateMakerRequest): Promise<MakerInfo> =>

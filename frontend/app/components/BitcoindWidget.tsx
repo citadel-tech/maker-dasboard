@@ -1,5 +1,24 @@
 import { useEffect, useState } from "react";
-import { bitcoind, type BitcoindStatusInfo } from "../api.ts";
+import {
+  bitcoind,
+  onboarding,
+  type BitcoindStatusInfo,
+  type StartupCheckKind,
+} from "../api.ts";
+
+const NETWORK_DEFAULTS: Record<
+  "regtest" | "signet",
+  { rpc: string; zmq: string }
+> = {
+  regtest: {
+    rpc: "127.0.0.1:18443",
+    zmq: "tcp://127.0.0.1:28332",
+  },
+  signet: {
+    rpc: "127.0.0.1:38332",
+    zmq: "tcp://127.0.0.1:28332",
+  },
+};
 
 export default function BitcoindWidget() {
   const [status, setStatus] = useState<BitcoindStatusInfo>({
@@ -10,20 +29,62 @@ export default function BitcoindWidget() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function fetchStatus() {
+  async function probeExternalBitcoind(
+    targetNetwork: "regtest" | "signet",
+  ): Promise<BitcoindStatusInfo | null> {
+    const defaults = NETWORK_DEFAULTS[targetNetwork];
+    const checks: StartupCheckKind[] = ["rest", "bitcoin", "rpc"];
+
+    for (const check of checks) {
+      try {
+        const result = await onboarding.startupCheck({
+          check,
+          rpc: defaults.rpc,
+          rpc_user: "user",
+          rpc_password: "password",
+          zmq: defaults.zmq,
+        });
+        if (result.success) {
+          return {
+            running: true,
+            managed: false,
+            network: targetNetwork,
+          };
+        }
+      } catch {
+        // Ignore and try the next detection method.
+      }
+    }
+
+    return null;
+  }
+
+  async function fetchStatus(targetNetwork = network) {
     try {
       const s = await bitcoind.status();
-      setStatus(s);
+      if (s.running) {
+        setStatus(s);
+        return;
+      }
+
+      const external = await probeExternalBitcoind(targetNetwork);
+      setStatus(external ?? s);
     } catch {
       // silently ignore poll failures
     }
   }
 
   useEffect(() => {
-    fetchStatus();
+    void fetchStatus(network);
     const interval = setInterval(fetchStatus, 5_000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!status.running) {
+      void fetchStatus(network);
+    }
+  }, [network]);
 
   async function toggle() {
     setPending(true);

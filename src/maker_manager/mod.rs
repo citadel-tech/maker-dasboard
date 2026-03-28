@@ -3,6 +3,7 @@ pub mod message;
 pub mod persistence;
 
 use std::collections::HashMap;
+use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -292,6 +293,56 @@ impl MakerManager {
             }
             cfg.network_port == port || cfg.rpc_port == port
         })
+    }
+
+    pub fn is_local_port_available(port: u16) -> bool {
+        TcpListener::bind(("127.0.0.1", port)).is_ok()
+    }
+
+    fn find_available_port(
+        &self,
+        start_port: u16,
+        exclude_id: Option<&str>,
+        reserved_ports: &[u16],
+    ) -> Result<u16> {
+        for port in start_port..=u16::MAX {
+            if reserved_ports.contains(&port) {
+                continue;
+            }
+            if self.is_port_in_use(port, exclude_id) {
+                continue;
+            }
+            if Self::is_local_port_available(port) {
+                return Ok(port);
+            }
+        }
+
+        Err(anyhow!(
+            "Failed to find an available port starting from {}",
+            start_port
+        ))
+    }
+
+    pub fn assign_available_maker_ports(
+        &self,
+        requested_network_port: u16,
+        requested_rpc_port: u16,
+        socks_port: u16,
+        control_port: u16,
+        exclude_id: Option<&str>,
+    ) -> Result<(u16, u16)> {
+        let network_port = self.find_available_port(
+            requested_network_port,
+            exclude_id,
+            &[socks_port, control_port],
+        )?;
+        let rpc_port = self.find_available_port(
+            requested_rpc_port,
+            exclude_id,
+            &[socks_port, control_port, network_port],
+        )?;
+
+        Ok((network_port, rpc_port))
     }
 
     /// Starts the coinswap server for a registered maker.
@@ -601,6 +652,8 @@ impl MakerManager {
 
 #[cfg(test)]
 mod tests {
+    use std::net::TcpListener;
+
     use super::{MakerConfig, MakerManager};
 
     #[test]
@@ -642,6 +695,41 @@ mod tests {
 
         let normalized = MakerManager::normalize_config(&"maker101".to_string(), config);
         assert_eq!(normalized.wallet_name.as_deref(), Some("maker101"));
+    }
+
+    #[test]
+    fn assign_available_maker_ports_skips_taken_local_ports() {
+        let config_dir =
+            std::env::temp_dir().join(format!("maker-manager-port-test-{}", std::process::id()));
+        if config_dir.exists() {
+            std::fs::remove_dir_all(&config_dir).unwrap();
+        }
+        std::fs::create_dir_all(&config_dir).unwrap();
+
+        let manager = MakerManager::new(config_dir).unwrap();
+        let network_listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let rpc_listener = TcpListener::bind("127.0.0.1:0").unwrap();
+
+        let requested_network_port = network_listener.local_addr().unwrap().port();
+        let requested_rpc_port = rpc_listener.local_addr().unwrap().port();
+
+        let (network_port, rpc_port) = manager
+            .assign_available_maker_ports(
+                requested_network_port,
+                requested_rpc_port,
+                9050,
+                9051,
+                None,
+            )
+            .unwrap();
+
+        assert_ne!(network_port, requested_network_port);
+        assert_ne!(rpc_port, requested_rpc_port);
+        assert_ne!(network_port, rpc_port);
+        assert_ne!(network_port, 9050);
+        assert_ne!(network_port, 9051);
+        assert_ne!(rpc_port, 9050);
+        assert_ne!(rpc_port, 9051);
     }
 }
 

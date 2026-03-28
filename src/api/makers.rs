@@ -9,7 +9,8 @@ use axum::{
 
 use super::{
     dto::{
-        ApiResponse, CreateMakerRequest, MakerInfo, MakerInfoDetailed, UpdateMakerConfigRequest,
+        ApiResponse, CreateMakerRequest, MakerInfo, MakerInfoDetailed, SuggestedMakerPorts,
+        UpdateMakerConfigRequest,
     },
     AppState,
 };
@@ -19,6 +20,7 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/makers", get(list_makers))
         .route("/makers", post(create_maker))
+        .route("/makers/ports/suggested", get(get_suggested_ports))
         .route("/makers/count", get(get_maker_count))
         .route("/makers/{id}", get(get_maker))
         .route("/makers/{id}", delete(delete_maker))
@@ -42,6 +44,35 @@ async fn list_makers(State(state): State<AppState>) -> Json<ApiResponse<Vec<Make
         .map(|id| MakerInfo { id: id.clone() })
         .collect();
     Json(ApiResponse::ok(makers))
+}
+
+/// Get the next available maker network/RPC port pair
+#[utoipa::path(
+    get, path = "/api/makers/ports/suggested", tag = "makers",
+    responses(
+        (status = 200, description = "Suggested maker ports", body = ApiResponse<SuggestedMakerPorts>),
+        (status = 500, description = "Internal error", body = ApiResponse<SuggestedMakerPorts>)
+    )
+)]
+async fn get_suggested_ports(
+    State(state): State<AppState>,
+) -> (StatusCode, Json<ApiResponse<SuggestedMakerPorts>>) {
+    let mgr = state.lock().await;
+    match mgr.assign_available_maker_ports(6102, 6103, 9050, 9051, None) {
+        Ok((network_port, rpc_port)) => (
+            StatusCode::OK,
+            Json(ApiResponse::ok(SuggestedMakerPorts {
+                network_port,
+                rpc_port,
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::err(format!(
+                "Failed to suggest maker ports: {e}"
+            ))),
+        ),
+    }
 }
 
 fn validate_maker_config(config: &MakerConfig) -> Result<(), String> {
@@ -127,7 +158,7 @@ async fn create_maker(
         }
     };
 
-    let config = MakerConfig {
+    let mut config = MakerConfig {
         auth,
         data_directory: body.data_directory.map(PathBuf::from),
         rpc: body.rpc.unwrap_or_else(|| "127.0.0.1:38332".to_string()),
@@ -155,17 +186,24 @@ async fn create_maker(
         return (StatusCode::BAD_REQUEST, Json(ApiResponse::err(e)));
     }
 
-    for (name, port) in [
-        ("network_port", config.network_port),
-        ("rpc_port", config.rpc_port),
-    ] {
-        if mgr.is_port_in_use(port, None) {
+    match mgr.assign_available_maker_ports(
+        config.network_port,
+        config.rpc_port,
+        config.socks_port,
+        config.control_port,
+        None,
+    ) {
+        Ok((network_port, rpc_port)) => {
+            config.network_port = network_port;
+            config.rpc_port = rpc_port;
+        }
+        Err(e) => {
             return (
-                StatusCode::CONFLICT,
+                StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ApiResponse::err(format!(
-                    "{name} {port} is already in use by another maker"
+                    "Failed to assign maker ports: {e}"
                 ))),
-            );
+            )
         }
     }
 

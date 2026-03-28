@@ -27,6 +27,11 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "settings", label: "Settings" },
 ];
 
+function truncateMiddle(value: string, start = 24, end = 18) {
+  if (value.length <= start + end + 1) return value;
+  return `${value.slice(0, start)}...${value.slice(-end)}`;
+}
+
 export default function MakerDetails() {
   const { makerId } = useParams<{ makerId: string }>();
   const id = makerId ?? "";
@@ -246,8 +251,11 @@ export default function MakerDetails() {
             </div>
             <div className="sm:max-w-xs">
               <div className="text-sm text-orange-100 mb-1">Tor Hostname</div>
-              <div className="text-xs sm:text-sm font-mono text-white bg-white/10 px-3 py-2 rounded-lg truncate">
-                {torAddress ?? "—"}
+              <div
+                className="text-xs sm:text-sm font-mono text-white bg-white/10 px-3 py-2 rounded-lg break-all"
+                title={torAddress ?? undefined}
+              >
+                {torAddress ? truncateMiddle(torAddress) : "—"}
               </div>
             </div>
           </div>

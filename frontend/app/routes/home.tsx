@@ -23,6 +23,7 @@ interface MakerRow {
   alive: boolean;
   balance: BalanceInfo | null;
   torAddress: string | null;
+  dataDir: string | null;
   earningsSats: number | null;
   swapReportCount: number | null;
   swapCompleted: UtxoInfo[];
@@ -38,6 +39,11 @@ function swapKey(
   return [makerId, utxo.addr, utxo.amount, utxo.utxo_type]
     .filter(Boolean)
     .join(":");
+}
+
+function truncateMiddle(value: string, start = 18, end = 14) {
+  if (value.length <= start + end + 1) return value;
+  return `${value.slice(0, start)}...${value.slice(-end)}`;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -86,6 +92,10 @@ export default function Home() {
           const alive =
             status.status === "fulfilled" ? status.value.alive : false;
           const torAddress = tor.status === "fulfilled" ? tor.value : null;
+          const dataDir =
+            info?.data_directory && info.data_directory.length > 0
+              ? info.data_directory
+              : null;
           const swapReports =
             reports.status === "fulfilled" ? reports.value : null;
           const swapCompleted =
@@ -108,6 +118,7 @@ export default function Home() {
             alive,
             balance: balData,
             torAddress,
+            dataDir,
             earningsSats,
             swapReportCount,
             swapCompleted,
@@ -338,8 +349,25 @@ export default function Home() {
                         <div className="text-xs text-gray-400 mb-1">
                           Tor Address
                         </div>
-                        <div className="font-mono text-xs text-orange-300 truncate">
-                          {maker.torAddress}
+                        <div
+                          className="font-mono text-xs text-orange-300 break-all"
+                          title={maker.torAddress}
+                        >
+                          {truncateMiddle(maker.torAddress)}
+                        </div>
+                      </div>
+                    )}
+
+                    {maker.dataDir && (
+                      <div className="mb-3 px-3 py-2 bg-gray-800 rounded-lg">
+                        <div className="text-xs text-gray-400 mb-1">
+                          Data Directory
+                        </div>
+                        <div
+                          className="font-mono text-xs text-gray-200 break-all"
+                          title={maker.dataDir}
+                        >
+                          {truncateMiddle(maker.dataDir, 20, 16)}
                         </div>
                       </div>
                     )}
