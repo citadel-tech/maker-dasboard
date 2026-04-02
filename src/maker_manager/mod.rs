@@ -7,6 +7,7 @@ use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use crate::utils::log_writer::MakerLogWriter;
 use anyhow::{anyhow, Result};
 use coinswap::bitcoin::Network;
 use coinswap::bitcoind::bitcoincore_rpc::Auth;
@@ -225,6 +226,7 @@ impl MakerManager {
             .data_directory
             .clone()
             .expect("maker data directory is initialized above");
+        MakerLogWriter::register_maker(&id, &data_dir)?;
         let wallet_name = config.wallet_name.clone().unwrap_or_else(|| id.clone());
         let network = self.infer_network(&config.rpc);
         let maker = Arc::new(
@@ -557,6 +559,7 @@ impl MakerManager {
     /// Removes a maker entirely (stops server, removes from pool, deletes config)
     pub fn remove_maker(&mut self, id: &MakerId) -> bool {
         self.pool.remove_maker(id);
+        MakerLogWriter::unregister_maker(id);
         let removed = self.configs.remove(id).is_some();
         if removed {
             self.persist();
@@ -583,10 +586,11 @@ impl MakerManager {
 
     /// Returns the log file path for a given maker ID.
     pub fn log_file_path(&self, maker_id: &str) -> std::path::PathBuf {
-        self.persistence
-            .config_dir
-            .join("logs")
-            .join(format!("maker-{maker_id}.log"))
+        self.configs
+            .get(maker_id)
+            .and_then(|config| config.data_directory.clone())
+            .unwrap_or_else(|| Self::default_maker_data_dir(&maker_id.to_string()))
+            .join("debug.log")
     }
 
     /// Starts a bitcoind process in the given network mode ("regtest" or "signet").

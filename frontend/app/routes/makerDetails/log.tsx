@@ -109,7 +109,7 @@ export default function Logs({ id }: Props) {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  const logPath = dataDir ? `${dataDir}/maker-${id}.log` : null;
+  const logPath = dataDir ? `${dataDir}/debug.log` : null;
 
   function copyPath() {
     if (!logPath) return;

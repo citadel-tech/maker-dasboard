@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use tracing_subscriber::fmt::MakeWriter;
 
@@ -37,25 +37,21 @@ impl Write for LogWriter {
 
 /// A `MakeWriter` implementation that routes logs to per-maker files
 /// based on the current thread name. Threads named `maker-{id}` get their own
-/// log file under `{log_dir}/maker-{id}.log`.
+/// log file under the maker data directory as `debug.log`.
 /// All other threads write to stdout.
 #[derive(Clone)]
-pub struct MakerLogWriter {
-    log_dir: PathBuf,
-}
+pub struct MakerLogWriter;
 
-/// Global cache of open file handles, keyed by maker id.
-static FILE_CACHE: OnceLock<Mutex<HashMap<String, PathBuf>>> = OnceLock::new();
+/// Global cache of maker log paths, keyed by maker id.
+static LOG_PATHS: OnceLock<Mutex<HashMap<String, PathBuf>>> = OnceLock::new();
 
-fn file_cache() -> &'static Mutex<HashMap<String, PathBuf>> {
-    FILE_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+fn log_paths() -> &'static Mutex<HashMap<String, PathBuf>> {
+    LOG_PATHS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 impl MakerLogWriter {
-    pub fn new(log_dir: impl Into<PathBuf>) -> Self {
-        let log_dir = log_dir.into();
-        fs::create_dir_all(&log_dir).expect("Failed to create log directory");
-        Self { log_dir }
+    pub fn new() -> Self {
+        Self
     }
 
     /// Extracts the maker id from thread names like `maker-mymaker`.
@@ -66,11 +62,32 @@ impl MakerLogWriter {
             .map(|id| id.to_string())
     }
 
+    pub fn register_maker(id: &str, data_dir: &Path) -> io::Result<()> {
+        fs::create_dir_all(data_dir)?;
+        let mut paths = log_paths().lock().unwrap();
+        paths.insert(id.to_string(), data_dir.join("debug.log"));
+        Ok(())
+    }
+
+    pub fn unregister_maker(id: &str) {
+        let mut paths = log_paths().lock().unwrap();
+        paths.remove(id);
+    }
+
     fn open_log_file(&self, maker_id: &str) -> io::Result<File> {
-        let mut cache = file_cache().lock().unwrap();
-        let path = cache
-            .entry(maker_id.to_string())
-            .or_insert_with(|| self.log_dir.join(format!("maker-{maker_id}.log")));
+        let path = {
+            let paths = log_paths().lock().unwrap();
+            paths.get(maker_id).cloned().ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::NotFound,
+                    format!("No registered log path for maker '{maker_id}'"),
+                )
+            })?
+        };
+
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
 
         OpenOptions::new().create(true).append(true).open(path)
     }

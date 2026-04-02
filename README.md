@@ -122,7 +122,7 @@ By default the dashboard only accepts connections from the local machine. If you
 Dashboard-managed files:
 
 - Registered maker configs: `~/.config/maker-dashboard/makers.json`
-- Per-maker logs: `~/.config/maker-dashboard/logs/maker-{id}.log`
+- Per-maker logs: `~/.coinswap/{id}/debug.log`
 
 Maker wallet and data directories are configured per maker and may differ from the dashboard config directory.
 

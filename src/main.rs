@@ -20,9 +20,7 @@ async fn main() {
         .config_dir
         .unwrap_or_else(maker_dashboard::utils::default_config_dir);
 
-    let log_dir = config_dir.join("logs");
-
-    let log_writer = MakerLogWriter::new(&log_dir);
+    let log_writer = MakerLogWriter::new();
 
     tracing_subscriber::registry()
         .with(
@@ -36,8 +34,6 @@ async fn main() {
         .init();
 
     tracing::info!("Using config directory: {}", config_dir.display());
-    tracing::info!("Maker logs directory: {}", log_dir.display());
-
     let config = ServerConfig {
         host: args.host,
         port: args.port,
